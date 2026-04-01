@@ -154,16 +154,20 @@ int ServoManager::read_byte(uint8_t id, uint8_t addr) {
     return sm_st_.readByte(id, addr);
 }
 
-bool ServoManager::write_world(uint8_t id, uint8_t addr, uint16_t value, bool is_eprom) {
+bool ServoManager::write_word(uint8_t id, uint8_t addr, int value, bool is_eprom, uint8_t negBit) {
     if (!is_initialized_.load()) {
-        std::cerr << "not initialized, _write_world failed!" << std::endl;
+        std::cerr << "not initialized, _write_word failed!" << std::endl;
         return false;
+    }
+
+    if (value < 0 && negBit != 0) {
+        value = abs(value) | (1 << negBit);
     }
 
     std::unique_lock lock(shared_mutex_);
     if (is_eprom) {
         if (!sm_st_.unLockEprom(id)) {
-            std::cerr << "_write_world: Failed to unLockEp" << std::endl;
+            std::cerr << "_write_word: Failed to unLockEp" << std::endl;
             return false;
         }
     }
@@ -172,59 +176,35 @@ bool ServoManager::write_world(uint8_t id, uint8_t addr, uint16_t value, bool is
 
     if (is_eprom) {
         if (!sm_st_.LockEprom(id)) {
-            std::cerr << "_write_world: Failed to LockEprom" << std::endl;
+            std::cerr << "_write_word: Failed to LockEprom" << std::endl;
             return false;
         }
     }
 
     if (!res) {
-        std::cerr << "_write_world: Failed!" << std::endl;
+        std::cerr << "_write_word: Failed!" << std::endl;
     }
 
     return res;
 }
 
-int ServoManager::read_world(uint8_t id, uint8_t addr) {
+int ServoManager::read_word(uint8_t id, uint8_t addr, uint8_t negBit) {
     if (!is_initialized_.load()) {
-        std::cerr << "not initialized, _read_world failed!" << std::endl;
+        std::cerr << "not initialized, _read_word failed!" << std::endl;
         return -1;
     }
 
     std::unique_lock lock(shared_mutex_);
-    return sm_st_.readWord(id, addr);
+    return _handle_word(sm_st_.readWord(id, addr), negBit);
 }
 
-u16 ServoManager::merge_two_byte(u8 DataL, u8 DataH) {
-    return sm_st_.SCS2Host(DataL, DataH);
+int ServoManager::merge_two_byte(uint8_t DataL, uint8_t DataH, uint8_t negBit) {
+    return _handle_word(sm_st_.SCS2Host(DataL, DataH), negBit);
 }
 
-void ServoManager::test() {
-    int Pos;
-    int Speed;
-    int Load;
-    int Voltage;
-    int Temper;
-    int Move;
-    int Current;
-    // 一条指令读舵机所有反馈数据至缓冲区
-    if (sm_st_.FeedBack(1) != -1) {
-        Pos = sm_st_.ReadPos(-1); //-1表示缓冲区数据，以下相同
-        Speed = sm_st_.ReadSpeed(-1);
-        Load = sm_st_.ReadLoad(-1);
-        Voltage = sm_st_.ReadVoltage(-1);
-        Temper = sm_st_.ReadTemper(-1);
-        Move = sm_st_.ReadMove(-1);
-        Current = sm_st_.ReadCurrent(-1);
-        std::cout << "pos = " << Pos << " ";
-        std::cout << "Speed = " << Speed << " ";
-        std::cout << "Load = " << Load << " ";
-        std::cout << "Voltage = " << Voltage << " ";
-        std::cout << "Temper = " << Temper << " ";
-        std::cout << "Move = " << Move << " ";
-        std::cout << "Current = " << Current << std::endl;
-        usleep(10 * 1000);
-    } else {
-        std::cout << "read err" << std::endl;
-        sleep(1);
+int ServoManager::_handle_word(int value, uint8_t negBit) {
+    if (negBit != 0 && value != -1 && (value & (1 << negBit)) != 0) {
+        value = -(value & ~(1 << negBit));
     }
+    return value;
 }

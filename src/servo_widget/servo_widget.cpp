@@ -20,6 +20,7 @@ ServoWidget::ServoWidget(QWidget *parent)
 }
 
 ServoWidget::~ServoWidget() {
+    status_timer_->stop();
     delete ui;
 }
 
@@ -108,7 +109,7 @@ void ServoWidget::_init_tableWidget() {
             if (it->second.size == 1) {
                 value = ServoManager::instance().read_byte(ui->comboBox_servo->currentText().toInt(), it->first);
             } else {
-                value = ServoManager::instance().read_world(ui->comboBox_servo->currentText().toInt(), it->first);
+                value = ServoManager::instance().read_word(ui->comboBox_servo->currentText().toInt(), it->first, it->second.sign_bit);
             }
             if (value == -1) {
                 QMessageBox::critical(this, "错误", "读取失败");
@@ -125,7 +126,7 @@ void ServoWidget::_init_tableWidget() {
             if (it->second.size == 1) {
                 res = ServoManager::instance().write_byte(ui->comboBox_servo->currentText().toInt(), it->first, doubleSpinBox->value() / it->second.factor, it->second.is_eprom);
             } else {
-                res = ServoManager::instance().write_world(ui->comboBox_servo->currentText().toInt(), it->first, doubleSpinBox->value() / it->second.factor, it->second.is_eprom);
+                res = ServoManager::instance().write_word(ui->comboBox_servo->currentText().toInt(), it->first, doubleSpinBox->value() / it->second.factor, it->second.is_eprom, it->second.sign_bit);
             }
             if (!res) {
                 QMessageBox::critical(this, "错误", "写入失败");
@@ -160,7 +161,7 @@ void ServoWidget::on_refresh_current_servo() {
             if (it->second.size == 1) {
                 value = read_buffer[it->first];
             } else if (it->second.size == 2) {
-                value = ServoManager::instance().merge_two_byte(read_buffer[it->first], read_buffer[it->first + 1]);
+                value = ServoManager::instance().merge_two_byte(read_buffer[it->first], read_buffer[it->first + 1], it->second.sign_bit);
             }
         }
 
@@ -197,7 +198,7 @@ void ServoWidget::on_update_servo_status() {
             if (it->second.size == 1) {
                 value = read_buffer[it->first - servo_status_addr_map_.begin()->first];
             } else if (it->second.size == 2) {
-                value = ServoManager::instance().merge_two_byte(read_buffer[it->first - servo_status_addr_map_.begin()->first], read_buffer[it->first - servo_status_addr_map_.begin()->first + 1]);
+                value = ServoManager::instance().merge_two_byte(read_buffer[it->first - servo_status_addr_map_.begin()->first], read_buffer[it->first - servo_status_addr_map_.begin()->first + 1], it->second.sign_bit);
             }
         }
 

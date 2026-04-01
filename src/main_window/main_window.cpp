@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
 MainWindow::~MainWindow() {
 }
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     // if (rclcpp::ok()) {
     //     try {

@@ -4,7 +4,13 @@
 ServoWidget::ServoWidget(QWidget *parent)
     : QWidget(parent), ui(new Ui::ServoWidget), status_timer_(new QTimer(this)) {
     ui->setupUi(this);
-    // ui->label_status->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    ui->label_status->setAlignment(Qt::AlignCenter);
+    ui->label_status->setAlignment(Qt::AlignCenter); // 确保内容块在 Label 区域居中
+    ui->label_status->setTextFormat(Qt::RichText);   // 明确指定为富文本格式
+
+    ui->textEdit_info->setMinimumWidth(350);
+    ui->textEdit_info->setReadOnly(true);
 
     ServoManager::instance();
     _init_comboBox();
@@ -13,6 +19,7 @@ ServoWidget::ServoWidget(QWidget *parent)
     connect(ui->comboBox_servo, &QComboBox::currentTextChanged, this, &ServoWidget::on_refresh_current_servo);
     connect(ui->pushButton_refresh, &QPushButton::clicked, this, &ServoWidget::on_refresh_current_servo);
     connect(ui->pushButton_ping, &QPushButton::clicked, this, &ServoWidget::on_ping_current_servo);
+    connect(ui->pushButton_clear, &QPushButton::clicked, ui->textEdit_info, &QTextEdit::clear);
     connect(status_timer_, &QTimer::timeout, this, &ServoWidget::on_update_servo_status);
 
     QTimer::singleShot(500, [this]() { on_refresh_current_servo(); });
@@ -44,7 +51,7 @@ void ServoWidget::_init_comboBox() {
 }
 
 void ServoWidget::_init_tableWidget() {
-    QVector<QString> addr_info = {"首地址", "功能", "默认值", "存储区", "权限", "最小值", "最大值", "单位", "当前值", "读取", "写入"};
+    QVector<QString> addr_info = {" 首地址 ", " 功能 ", " 默认值 ", " 存储区 ", " 权限 ", " 最小值 ", " 最大值 ", " 单位 ", " 当前值 ", " 读取 ", " 写入 "};
 
     ui->tableWidget_servo->clear();
     ui->tableWidget_servo->setColumnCount(addr_info.size());
@@ -96,8 +103,8 @@ void ServoWidget::_init_tableWidget() {
         set_item(row, 7, item);
 
         doubleSpinBox = new QDoubleSpinBox(this);
-        doubleSpinBox->setRange(-999999.0, 999999.0); // 设置范围
-        doubleSpinBox->setDecimals(decimals);         // 设置小数位数
+        doubleSpinBox->setRange(-65532, 65532); // 设置范围
+        doubleSpinBox->setDecimals(decimals);   // 设置小数位数
         doubleSpinBox->setValue(-1);
         // doubleSpinBox->setButtonSymbols(QAbstractSpinBox::NoButtons); // 如果不需要右侧调节按钮可以隐藏
         ui->tableWidget_servo->setCellWidget(row, 8, doubleSpinBox);
@@ -112,9 +119,10 @@ void ServoWidget::_init_tableWidget() {
                 value = ServoManager::instance().read_word(ui->comboBox_servo->currentText().toInt(), it->first, it->second.sign_bit);
             }
             if (value == -1) {
-                QMessageBox::critical(this, "错误", "读取失败");
+                on_append_info("读取舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " " + QString::fromStdString(it->second.description) + " 失败", true);
                 doubleSpinBox->setValue(-1);
             } else {
+                on_append_info("读取舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " " + QString::fromStdString(it->second.description) + " 成功");
                 doubleSpinBox->setValue(value * it->second.factor);
             }
         });
@@ -129,7 +137,9 @@ void ServoWidget::_init_tableWidget() {
                 res = ServoManager::instance().write_word(ui->comboBox_servo->currentText().toInt(), it->first, doubleSpinBox->value() / it->second.factor, it->second.is_eprom, it->second.sign_bit);
             }
             if (!res) {
-                QMessageBox::critical(this, "错误", "写入失败");
+                on_append_info("写入舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " " + QString::fromStdString(it->second.description) + " 失败", true);
+            } else {
+                on_append_info("写入舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " " + QString::fromStdString(it->second.description) + " 成功");
             }
         });
 
@@ -140,7 +150,7 @@ void ServoWidget::_init_tableWidget() {
     ui->tableWidget_servo->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidget_servo->horizontalHeader()->setSectionResizeMode(8, QHeaderView::Fixed);
 
-    ui->tableWidget_servo->horizontalHeader()->resizeSection(8, 150);
+    ui->tableWidget_servo->horizontalHeader()->resizeSection(8, 100);
 }
 
 void ServoWidget::on_refresh_current_servo() {
@@ -150,8 +160,10 @@ void ServoWidget::on_refresh_current_servo() {
 
     bool read_success = true;
     if (actual_read_size != should_read_size) {
-        QMessageBox::critical(this, "错误", "读取当前舵机参数失败");
+        on_append_info("刷新舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " 参数失败", true);
         read_success = false;
+    } else {
+        on_append_info("刷新舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " 参数成功");
     }
 
     int row = 0;
@@ -172,9 +184,9 @@ void ServoWidget::on_refresh_current_servo() {
 
 void ServoWidget::on_ping_current_servo() {
     if (ServoManager::instance().ping(ui->comboBox_servo->currentText().toInt())) {
-        QMessageBox::information(this, "通知", "当前舵机在线");
+        on_append_info("舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " 在线");
     } else {
-        QMessageBox::critical(this, "错误", "当前舵机离线");
+        on_append_info("舵机 ID=" + QString::number(ui->comboBox_servo->currentText().toInt()) + " 离线");
     }
 }
 
@@ -188,30 +200,53 @@ void ServoWidget::on_update_servo_status() {
         read_success = false;
     }
 
-    QString status_info;
+    QString status_info = QString("<tr>"
+                                  "</tr>");
     int row = 0;
     for (auto it = servo_status_addr_map_.begin(); it != servo_status_addr_map_.end(); it++) {
-        int value = -1;
-        int decimals = (fabs(fabs(it->second.factor) - 1.0) > pow(1, -6)) ? 2 : 0;
-
         if (read_success) {
+            int value = -1;
+            int decimals = (fabs(fabs(it->second.factor) - 1.0) > pow(1, -6)) ? 2 : 0;
+
             if (it->second.size == 1) {
                 value = read_buffer[it->first - servo_status_addr_map_.begin()->first];
             } else if (it->second.size == 2) {
                 value = ServoManager::instance().merge_two_byte(read_buffer[it->first - servo_status_addr_map_.begin()->first], read_buffer[it->first - servo_status_addr_map_.begin()->first + 1], it->second.sign_bit);
             }
+            status_info += QString("<tr>"
+                                   "<td align='right'>%1:</td>"                                  // 描述右对齐
+                                   "<td align='center' width='40' style='color: black;'>%2</td>" // 数值居中
+                                   "<td align='left'>%3</td>"                                    // 单位左对齐
+                                   "</tr>")
+                               .arg(QString::fromStdString(it->second.description))
+                               .arg(QString::number(value * it->second.factor, 'f', decimals))
+                               .arg(QString::fromStdString(it->second.unit));
+        } else {
+            status_info += QString("<tr>"
+                                   "<td align='right'>%1:</td>"                                // 描述右对齐
+                                   "<td align='center' width='40' style='color: red;'>%2</td>" // 数值居中
+                                   "<td align='left'>%3</td>"                                  // 单位左对齐
+                                   "</tr>")
+                               .arg(QString::fromStdString(it->second.description))
+                               .arg(QString::number(-1, 'f', 0))
+                               .arg(QString::fromStdString(it->second.unit));
         }
-
-        status_info += QString("<td>"
-                               "<td align='left'>%1:</td>"             // 描述右对齐
-                               "<td align='center' width='40'>%2</td>" // 数值居中
-                               "<td align='left'>%3</td>"              // 单位左对齐
-                               "</td>")
-                           .arg(QString::fromStdString(it->second.description))
-                           .arg(QString::number(value * it->second.factor, 'f', decimals))
-                           .arg(QString::fromStdString(it->second.unit) + ", ");
         row++;
     }
 
+    status_info += QString("<tr>"
+                           "</tr>");
     ui->label_status->setText(status_info);
+}
+
+void ServoWidget::on_append_info(const QString &info, bool is_error) {
+    QString cmd_string = " [" + QDateTime::currentDateTime().toString("HH:mm:ss.zzz") + "] " + info; // yyyy-MM-dd
+    QString html_string;
+    if (!is_error) {
+        html_string = QString("<span style='color:green;'>%1</span>").arg(cmd_string.toHtmlEscaped());
+    } else {
+        html_string = QString("<span style='color:red;'>%1</span>").arg(cmd_string.toHtmlEscaped());
+    }
+    ui->textEdit_info->append(html_string);
+    ui->textEdit_info->moveCursor(QTextCursor::End);
 }

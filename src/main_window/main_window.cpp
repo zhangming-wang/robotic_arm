@@ -3,7 +3,7 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(std::make_shared<Ui::MainWindow>()) {
     ui->setupUi(this);
-    setWindowTitle("差速小车控制系统");
+    setWindowTitle("机械臂控制系统");
 
     connect(ui->action_cascade, &QAction::triggered, ui->mdiArea, &QMdiArea::cascadeSubWindows);
     connect(ui->action_tile, &QAction::triggered, ui->mdiArea, &QMdiArea::tileSubWindows);

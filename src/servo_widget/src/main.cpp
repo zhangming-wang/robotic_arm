@@ -1,6 +1,4 @@
 #include "main_window/main_window.h"
-#include "servo_driver/SCServo.h"
-#include "servo_manager/servo_manager.h"
 #include <QApplication>
 #include <iostream>
 

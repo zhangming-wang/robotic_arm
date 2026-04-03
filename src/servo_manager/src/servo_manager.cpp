@@ -1,15 +1,123 @@
-#include "servo_manager.h"
+#include "servo_manager/servo_manager.h"
 
-void ServoManager::init(const std::string &serial_port, int baudRate) {
+bool ServoManager::init(const std::string &serial_port, int baudRate) {
+    close();
     std::unique_lock lock(shared_mutex_);
-    is_initialized_.store(false);
-    sm_st_.end();
     if (!sm_st_.begin(baudRate, serial_port.c_str())) {
         std::cerr << "Failed to initialize SMS_STS motor!" << std::endl;
+        return false;
     } else {
         std::cout << "SMS_STS motor initialized successfully!" << std::endl;
         is_initialized_.store(true);
+        return true;
     }
+}
+
+void ServoManager::close() {
+    std::unique_lock lock(shared_mutex_);
+    is_initialized_.store(false);
+    sm_st_.end();
+}
+
+void ServoManager::stop(std::vector<uint8_t> &ids, uint8_t run_mode) {
+    if (!is_initialized_.load()) {
+        std::cerr << "not initialized, stop failed!" << std::endl;
+        return;
+    }
+
+    if (run_mode == 0) {
+        std::vector<uint8_t> data(ids.size(), 0);
+        std::unique_lock lock(shared_mutex_);
+        sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
+    } else if (run_mode == 1) {
+        std::vector<int16_t> servo_pos(ids.size(), 0), servo_speed(ids.size(), 0);
+        std::vector<uint8_t> servo_acc(ids.size(), 0);
+        std::unique_lock lock(shared_mutex_);
+        sm_st_.SyncWritePosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data(), servo_acc.data());
+    } else {
+        std::cerr << "unsupported run_mode: " << (int)run_mode << std::endl;
+    }
+}
+
+bool ServoManager::move(std::vector<uint8_t> &ids, std::vector<double> &position, std::vector<double> &speed, std::vector<double> &acceleration) {
+    if (!is_initialized_.load()) {
+        std::cerr << "not initialized, move failed!" << std::endl;
+        return false;
+    }
+
+    if (position.size() != ids.size() || speed.size() != ids.size() || acceleration.size() != ids.size()) {
+        std::cerr << "size of position, speed, acceleration should be the same as size of ids!" << std::endl;
+        return false;
+    }
+
+    std::vector<int16_t> servo_pos(position.size(), 0), servo_speed(speed.size(), 0);
+    std::vector<uint8_t> servo_acc(acceleration.size(), 0);
+
+    for (size_t i = 0; i < position.size(); ++i) {
+        servo_pos[i] = static_cast<int16_t>(position[i] / M_PI * 2048 + 2048);
+        servo_speed[i] = static_cast<int16_t>(speed[i] / M_PI * 2048);
+        servo_acc[i] = static_cast<uint8_t>(acceleration[i] / M_PI * 2048);
+    }
+
+    std::unique_lock lock(shared_mutex_);
+
+    sm_st_.SyncWritePosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data(), servo_acc.data());
+
+    return true;
+}
+
+bool ServoManager::get_state(std::vector<uint8_t> &ids, std::vector<double> &position, std::vector<double> &speed) {
+    if (!is_initialized_.load()) {
+        std::cerr << "not initialized, get_state failed!" << std::endl;
+        return false;
+    }
+
+    if (position.size() != ids.size() || speed.size() != ids.size()) {
+        std::cerr << "size of position, speed should be the same as size of ids!" << std::endl;
+        return false;
+    }
+
+    std::vector<int16_t> servo_pos(position.size(), 0), servo_speed(speed.size(), 0);
+
+    {
+        std::unique_lock lock(shared_mutex_);
+        bool success = sm_st_.SyncReadPosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data());
+        if (!success) {
+            std::cerr << "Failed to read servo state!" << std::endl;
+            return false;
+        }
+    }
+
+    for (size_t i = 0; i < position.size(); ++i) {
+        position[i] = static_cast<double>(servo_pos[i] - 2048) / 2048 * M_PI;
+        speed[i] = static_cast<double>(servo_speed[i]) / 2048 * M_PI;
+    }
+
+    return true;
+}
+
+bool ServoManager::enable_torque(std::vector<uint8_t> &ids, bool enable) {
+    if (!is_initialized_.load()) {
+        std::cerr << "not initialized, enable_torque failed!" << std::endl;
+        return false;
+    }
+
+    std::vector<uint8_t> data(ids.size(), enable ? 1 : 0);
+    std::unique_lock lock(shared_mutex_);
+    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
+    return true;
+}
+
+bool ServoManager::calibration_ofs(std::vector<uint8_t> &ids) {
+    if (!is_initialized_.load()) {
+        std::cerr << "not initialized, calibration_ofs failed!" << std::endl;
+        return false;
+    }
+
+    std::vector<uint8_t> data(ids.size(), 128);
+    std::unique_lock lock(shared_mutex_);
+    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
+    return true;
 }
 
 bool ServoManager::ping(uint8_t id) {

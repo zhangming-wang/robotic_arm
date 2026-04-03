@@ -1,12 +1,15 @@
 #pragma once
+
 #include "common/singleton.h"
 #include "servo_driver/SCServo.h"
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <math.h>
 #include <mutex>
 #include <shared_mutex>
 #include <thread>
+#include <vector>
 
 class ServoManager : public Singleton<ServoManager> {
 
@@ -20,9 +23,17 @@ class ServoManager : public Singleton<ServoManager> {
     ServoManager(const ServoManager &) = delete;
     ServoManager &operator=(const ServoManager &) = delete;
 
-    void init(const std::string &serial_port = "/dev/ttyACM0", int baudRate = 1000000);
-    bool ping(uint8_t id);
+    bool init(const std::string &serial_port = "/dev/ttyACM0", int baudRate = 1000000);
+    void close();
 
+    void stop(std::vector<uint8_t> &ids, uint8_t run_mode);
+    bool move(std::vector<uint8_t> &ids, std::vector<double> &position, std::vector<double> &speed, std::vector<double> &acceleration);
+    bool get_state(std::vector<uint8_t> &ids, std::vector<double> &position, std::vector<double> &speed);
+    bool enable_torque(std::vector<uint8_t> &ids, bool enable);
+
+    bool calibration_ofs(std::vector<uint8_t> &ids);
+
+    bool ping(uint8_t id);
     bool set_id(uint8_t old_id, uint8_t new_id);
     bool calibration_ofs(uint8_t id);
 

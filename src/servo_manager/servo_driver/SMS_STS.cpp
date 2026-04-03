@@ -45,7 +45,7 @@ int SMS_STS::RegWritePosEx(u8 ID, s16 Position, u16 Speed, u8 ACC) {
     return regWrite(ID, SMS_STS_ACC, bBuf, 7);
 }
 
-void SMS_STS::SyncWritePosEx(u8 ID[], u8 IDN, s16 Position[], u16 Speed[], u8 ACC[]) {
+void SMS_STS::SyncWritePosEx(u8 ID[], u8 IDN, s16 Position[], s16 Speed[], u8 ACC[]) {
 
     u8 offbuf[IDN][7];
     for (u8 i = 0; i < IDN; i++) {
@@ -53,21 +53,17 @@ void SMS_STS::SyncWritePosEx(u8 ID[], u8 IDN, s16 Position[], u16 Speed[], u8 AC
             Position[i] = -Position[i];
             Position[i] |= (1 << 15);
         }
+        if (Speed[i] < 0) {
+            Speed[i] = -Speed[i];
+            Speed[i] |= (1 << 15);
+        }
+
         u8 bBuf[7];
-        u16 V;
-        if (Speed) {
-            V = Speed[i];
-        } else {
-            V = 0;
-        }
-        if (ACC) {
-            bBuf[0] = ACC[i];
-        } else {
-            bBuf[0] = 0;
-        }
+
+        bBuf[0] = ACC[i];
         Host2SCS(bBuf + 1, bBuf + 2, Position[i]);
         Host2SCS(bBuf + 3, bBuf + 4, 0);
-        Host2SCS(bBuf + 5, bBuf + 6, V);
+        Host2SCS(bBuf + 5, bBuf + 6, Speed[i]);
         memcpy(offbuf[i], bBuf, 7);
     }
     snycWrite(ID, IDN, SMS_STS_ACC, (u8 *)offbuf, 7);
@@ -235,4 +231,21 @@ int SMS_STS::ReadCurrent(int ID) {
         Current = -(Current & ~(1 << 15));
     }
     return Current;
+}
+
+bool SMS_STS::SyncReadPosEx(u8 ID[], u8 IDN, s16 Position[], s16 Speed[]) {
+    u8 rxPacket[4];
+    syncReadBegin(sizeof(ID), sizeof(rxPacket));
+    int size = syncReadPacketTx(ID, sizeof(ID), SMS_STS_PRESENT_POSITION_L, sizeof(rxPacket));
+    if (size > 0) {
+        for (int i = 0; i < IDN; i++) {
+            if (!syncReadPacketRx(ID[i], rxPacket)) {
+                continue;
+            }
+            Position[i] = syncReadRxPacketToWrod(15);
+            Speed[i] = syncReadRxPacketToWrod(15);
+        }
+    }
+    syncReadEnd();
+    return size > 0;
 }

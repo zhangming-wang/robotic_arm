@@ -4,7 +4,7 @@
 ServoWidget::ServoWidget(QWidget *parent)
     : QWidget(parent), ui(new Ui::ServoWidget), status_timer_(new QTimer(this)) {
     ui->setupUi(this);
-
+    ui->splitter->setSizes({1000, 1});
     ui->label_status->setAlignment(Qt::AlignCenter);
     ui->label_status->setAlignment(Qt::AlignCenter); // 确保内容块在 Label 区域居中
     ui->label_status->setTextFormat(Qt::RichText);   // 明确指定为富文本格式
@@ -19,7 +19,9 @@ ServoWidget::ServoWidget(QWidget *parent)
     connect(ui->comboBox_servo, &QComboBox::currentTextChanged, this, &ServoWidget::on_refresh_current_servo);
     connect(ui->pushButton_refresh, &QPushButton::clicked, this, &ServoWidget::on_refresh_current_servo);
     connect(ui->pushButton_ping, &QPushButton::clicked, this, &ServoWidget::on_ping_current_servo);
+    connect(ui->pushButton_move, &QPushButton::clicked, this, &ServoWidget::on_move);
     connect(ui->pushButton_clear, &QPushButton::clicked, ui->textEdit_info, &QTextEdit::clear);
+    connect(ui->pushButton_calibration_ofs, &QPushButton::clicked, this, &ServoWidget::on_calibration_ofs);
     connect(status_timer_, &QTimer::timeout, this, &ServoWidget::on_update_servo_status);
 
     QTimer::singleShot(500, [this]() { on_refresh_current_servo(); });
@@ -191,51 +193,89 @@ void ServoWidget::on_ping_current_servo() {
 }
 
 void ServoWidget::on_update_servo_status() {
-    int should_read_size = std::prev(servo_status_addr_map_.end())->first - servo_status_addr_map_.begin()->first + std::prev(servo_status_addr_map_.end())->second.size;
-    std::vector<uint8_t> read_buffer(should_read_size);
-    int actual_read_size = ServoManager::instance().read_addr(ui->comboBox_servo->currentText().toInt(), servo_status_addr_map_.begin()->first, read_buffer.data(), should_read_size);
-
-    bool read_success = true;
-    if (actual_read_size != should_read_size) {
-        read_success = false;
-    }
-
     QString status_info = QString("<tr>"
                                   "</tr>");
-    int row = 0;
-    for (auto it = servo_status_addr_map_.begin(); it != servo_status_addr_map_.end(); it++) {
-        if (read_success) {
-            int value = -1;
-            int decimals = (fabs(fabs(it->second.factor) - 1.0) > pow(1, -6)) ? 2 : 0;
 
-            if (it->second.size == 1) {
-                value = read_buffer[it->first - servo_status_addr_map_.begin()->first];
-            } else if (it->second.size == 2) {
-                value = ServoManager::instance().merge_two_byte(read_buffer[it->first - servo_status_addr_map_.begin()->first], read_buffer[it->first - servo_status_addr_map_.begin()->first + 1], it->second.sign_bit);
+    if (ui->checkBox_servo_0->isChecked() || ui->checkBox_servo_1->isChecked() || ui->checkBox_servo_2->isChecked() || ui->checkBox_servo_3->isChecked() || ui->checkBox_servo_4->isChecked() || ui->checkBox_servo_5->isChecked()) {
+        std::vector<uint8_t> ids = {1, 2, 3, 4, 5, 6};
+
+        std::vector<double> position(ids.size()), speed(ids.size());
+        bool success = ServoManager::instance().get_state(ids, position, speed);
+        for (size_t i = 0; i < ids.size(); ++i) {
+            if (success) {
+                status_info += QString("<tr>"
+                                       "<td align='right'>ID %1:</td>"                                     // 描述右对齐
+                                       "<td align='center' width='10' style='color: black;'>位置  %2</td>" // 数值居中
+                                       "<td align='left' width='40'>%3</td>"                               // 单位左对齐
+                                       "<td align='center' width='60' style='color: black;'>速度  %4</td>" // 数值居中
+                                       "<td align='left' width='40'>%5</td>"
+                                       "</tr>")
+                                   .arg(ids[i])
+                                   .arg(QString::number(position[i], 'f', 2))
+                                   .arg("rad")
+                                   .arg(QString::number(speed[i], 'f', 2))
+                                   .arg("rad/s");
+            } else {
+                status_info += QString("<tr>"
+                                       "<td align='right'>ID %1:</td>"                                     // 描述右对齐
+                                       "<td align='center' width='10' style='color: black;'>位置  %2</td>" // 数值居中
+                                       "<td align='left' width='40'>%3</td>"                               // 单位左对齐
+                                       "<td align='center' width='60' style='color: black;'>速度  %4</td>" // 数值居中
+                                       "<td align='left' width='60'>%5</td>"
+                                       "</tr>")
+                                   .arg(ids[i])
+                                   .arg(QString::number(-1, 'f', 0))
+                                   .arg("rad")
+                                   .arg(QString::number(-1, 'f', 0))
+                                   .arg("rad/s");
             }
-            status_info += QString("<tr>"
-                                   "<td align='right'>%1:</td>"                                  // 描述右对齐
-                                   "<td align='center' width='40' style='color: black;'>%2</td>" // 数值居中
-                                   "<td align='left'>%3</td>"                                    // 单位左对齐
-                                   "</tr>")
-                               .arg(QString::fromStdString(it->second.description))
-                               .arg(QString::number(value * it->second.factor, 'f', decimals))
-                               .arg(QString::fromStdString(it->second.unit));
-        } else {
-            status_info += QString("<tr>"
-                                   "<td align='right'>%1:</td>"                                // 描述右对齐
-                                   "<td align='center' width='40' style='color: red;'>%2</td>" // 数值居中
-                                   "<td align='left'>%3</td>"                                  // 单位左对齐
-                                   "</tr>")
-                               .arg(QString::fromStdString(it->second.description))
-                               .arg(QString::number(-1, 'f', 0))
-                               .arg(QString::fromStdString(it->second.unit));
         }
-        row++;
+    } else {
+        int should_read_size = std::prev(servo_status_addr_map_.end())->first - servo_status_addr_map_.begin()->first + std::prev(servo_status_addr_map_.end())->second.size;
+        std::vector<uint8_t> read_buffer(should_read_size);
+        int actual_read_size = ServoManager::instance().read_addr(ui->comboBox_servo->currentText().toInt(), servo_status_addr_map_.begin()->first, read_buffer.data(), should_read_size);
+
+        bool read_success = true;
+        if (actual_read_size != should_read_size) {
+            read_success = false;
+        }
+
+        int row = 0;
+        for (auto it = servo_status_addr_map_.begin(); it != servo_status_addr_map_.end(); it++) {
+            if (read_success) {
+                int value = -1;
+                int decimals = (fabs(fabs(it->second.factor) - 1.0) > pow(1, -6)) ? 2 : 0;
+
+                if (it->second.size == 1) {
+                    value = read_buffer[it->first - servo_status_addr_map_.begin()->first];
+                } else if (it->second.size == 2) {
+                    value = ServoManager::instance().merge_two_byte(read_buffer[it->first - servo_status_addr_map_.begin()->first], read_buffer[it->first - servo_status_addr_map_.begin()->first + 1], it->second.sign_bit);
+                }
+                status_info += QString("<tr>"
+                                       "<td align='right'>%1:</td>"                                  // 描述右对齐
+                                       "<td align='center' width='40' style='color: black;'>%2</td>" // 数值居中
+                                       "<td align='left'>%3</td>"                                    // 单位左对齐
+                                       "</tr>")
+                                   .arg(QString::fromStdString(it->second.description))
+                                   .arg(QString::number(value * it->second.factor, 'f', decimals))
+                                   .arg(QString::fromStdString(it->second.unit));
+            } else {
+                status_info += QString("<tr>"
+                                       "<td align='right'>%1:</td>"                                // 描述右对齐
+                                       "<td align='center' width='40' style='color: red;'>%2</td>" // 数值居中
+                                       "<td align='left'>%3</td>"                                  // 单位左对齐
+                                       "</tr>")
+                                   .arg(QString::fromStdString(it->second.description))
+                                   .arg(QString::number(-1, 'f', 0))
+                                   .arg(QString::fromStdString(it->second.unit));
+            }
+            row++;
+        }
     }
 
     status_info += QString("<tr>"
                            "</tr>");
+
     ui->label_status->setText(status_info);
 }
 
@@ -249,4 +289,82 @@ void ServoWidget::on_append_info(const QString &info, bool is_error) {
     }
     ui->textEdit_info->append(html_string);
     ui->textEdit_info->moveCursor(QTextCursor::End);
+}
+
+void ServoWidget::on_move() {
+    std::vector<uint8_t> ids;
+    std::vector<double> position, speed, acc;
+
+    if (ui->checkBox_servo_0->isChecked()) {
+        ids.push_back(1);
+        position.push_back(ui->doubleSpinBox_position_servo_0->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_0->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_0->value());
+    }
+    if (ui->checkBox_servo_1->isChecked()) {
+        ids.push_back(2);
+        position.push_back(ui->doubleSpinBox_position_servo_1->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_1->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_1->value());
+    }
+    if (ui->checkBox_servo_2->isChecked()) {
+        ids.push_back(3);
+        position.push_back(ui->doubleSpinBox_position_servo_2->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_2->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_2->value());
+    }
+    if (ui->checkBox_servo_3->isChecked()) {
+        ids.push_back(4);
+        position.push_back(ui->doubleSpinBox_position_servo_3->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_3->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_3->value());
+    }
+    if (ui->checkBox_servo_4->isChecked()) {
+        ids.push_back(5);
+        position.push_back(ui->doubleSpinBox_position_servo_4->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_4->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_4->value());
+    }
+    if (ui->checkBox_servo_5->isChecked()) {
+        ids.push_back(6);
+        position.push_back(ui->doubleSpinBox_position_servo_5->value());
+        speed.push_back(ui->doubleSpinBox_speed_servo_5->value());
+        acc.push_back(ui->doubleSpinBox_acc_servo_5->value());
+    }
+
+    bool success = ServoManager::instance().move(ids, position, speed, acc);
+    if (success) {
+        on_append_info("写入多个舵机位置指令成功");
+    } else {
+        on_append_info("写入多个舵机位置指令失败", true);
+    }
+}
+
+void ServoWidget::on_calibration_ofs() {
+    std::vector<uint8_t> ids;
+    if (ui->checkBox_servo_0->isChecked()) {
+        ids.push_back(1);
+    }
+    if (ui->checkBox_servo_1->isChecked()) {
+        ids.push_back(2);
+    }
+    if (ui->checkBox_servo_2->isChecked()) {
+        ids.push_back(3);
+    }
+    if (ui->checkBox_servo_3->isChecked()) {
+        ids.push_back(4);
+    }
+    if (ui->checkBox_servo_4->isChecked()) {
+        ids.push_back(5);
+    }
+    if (ui->checkBox_servo_5->isChecked()) {
+        ids.push_back(6);
+    }
+
+    bool success = ServoManager::instance().calibration_ofs(ids);
+    if (success) {
+        on_append_info("设置中位成功");
+    } else {
+        on_append_info("设置中位失败", true);
+    }
 }

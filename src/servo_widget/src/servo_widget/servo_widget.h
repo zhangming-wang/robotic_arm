@@ -45,6 +45,8 @@ class ServoWidget : public QWidget {
     void on_ping_current_servo();
     void on_update_servo_status();
     void on_append_info(const QString &info, bool is_error = false);
+    void on_move();
+    void on_calibration_ofs();
 
   protected:
     void showEvent(QShowEvent *event) override;
@@ -113,9 +115,9 @@ class ServoWidget : public QWidget {
         {56, ServoAddrInfo{2, false, true, 15, -1, -1, -1, 1.0f, "当前位置", "步"}},
         {58, ServoAddrInfo{2, false, true, 15, -1, -1, -1, 1.0f, "当前速度", "步/s"}},
         {60, ServoAddrInfo{2, false, true, 10, -1, -1, -1, 0.1f, "当前负载", "%"}},
-        {62, ServoAddrInfo{1, false, true, 0, -1, -1, -1, 0.1f, "当前电压", "V"}},
-        {63, ServoAddrInfo{1, false, true, 0, -1, -1, -1, 1.0f, "当前温度", "°C"}},
-        {64, ServoAddrInfo{1, false, true, 0, 0, -1, -1, 1.0f, "异步写标志", ""}},
+        // {62, ServoAddrInfo{1, false, true, 0, -1, -1, -1, 0.1f, "当前电压", "V"}},
+        // {63, ServoAddrInfo{1, false, true, 0, -1, -1, -1, 1.0f, "当前温度", "°C"}},
+        // {64, ServoAddrInfo{1, false, true, 0, 0, -1, -1, 1.0f, "异步写标志", ""}},
         {65, ServoAddrInfo{1, false, true, 0, 0, -1, -1, 1.0f, "舵机状态", ""}},
         {66, ServoAddrInfo{1, false, true, 0, 0, -1, -1, 1.0f, "移动标志", ""}},
         // {67, ServoAddrInfo{2, false, true, 0, 0, -1, -1, 1.0f, "无定义", ""}},

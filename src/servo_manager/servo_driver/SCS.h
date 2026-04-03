@@ -25,12 +25,13 @@ class SCS {
     int readByte(u8 ID, u8 MemAddr);                                // 读1个字节
     int readWord(u8 ID, u8 MemAddr);                                // 读2个字节
     int Ping(u8 ID);                                                // Ping指令
-    int syncReadPacketTx(u8 ID[], u8 IDN, u8 MemAddr, u8 nLen);     // 同步读指令包发送
-    int syncReadPacketRx(u8 ID, u8 *nDat);                          // 同步读返回包解码，成功返回内存字节数，失败返回0
-    int syncReadRxPacketToByte();                                   // 解码一个字节
-    int syncReadRxPacketToWrod(u8 negBit = 0);                      // 解码两个字节，negBit为方向为，negBit=0表示无方向
-    void syncReadBegin(u8 IDN, u8 rxLen);                           // 同步读开始
-    void syncReadEnd();                                             // 同步读结束
+    int snycRead(u8 ID[], u8 IDN, u8 MemAddr, u8 *nDat, u8 nLen);
+    int syncReadPacketTx(u8 ID[], u8 IDN, u8 MemAddr, u8 nLen); // 同步读指令包发送
+    int syncReadPacketRx(u8 ID, u8 *nDat);                      // 同步读返回包解码，成功返回内存字节数，失败返回0
+    int syncReadRxPacketToByte();                               // 解码一个字节
+    int syncReadRxPacketToWrod(u8 negBit = 0);                  // 解码两个字节，negBit为方向为，negBit=0表示无方向
+    void syncReadBegin(u8 IDN, u8 rxLen);                       // 同步读开始
+    void syncReadEnd();                                         // 同步读结束
 
     void Host2SCS(u8 *DataL, u8 *DataH, u16 Data); // 1个16位数拆分为2个8位数
     u16 SCS2Host(u8 DataL, u8 DataH);              // 2个8位数组合为1个16位数

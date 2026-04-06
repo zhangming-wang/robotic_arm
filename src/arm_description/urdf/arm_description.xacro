@@ -1,0 +1,236 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="base">
+
+    <xacro:property name="servo_0_length" value="0.03511" />
+    <xacro:property name="servo_0_width" value="0.02472" />
+    <xacro:property name="servo_0_height" value="0.0485" />
+
+    <xacro:property name="servo_1_length" value="0.0442" />
+    <xacro:property name="servo_1_width" value="0.020" />
+    <xacro:property name="servo_1_height" value="0.03715" />
+
+    <xacro:property name="servo_2_length" value="0.0556" />
+    <xacro:property name="servo_2_width" value="0.020" />
+    <xacro:property name="servo_2_height" value="0.064" />
+
+    <xacro:property name="servo_3_length" value="0.0516" />
+    <xacro:property name="servo_3_width" value="0.020" />
+    <xacro:property name="servo_3_height" value="0.064" />
+
+    <xacro:property name="servo_4_length" value="0.0442" />
+    <xacro:property name="servo_4_width" value="0.020" />
+    <xacro:property name="servo_4_height" value="0.03715" />
+
+    <xacro:property name="servo_5_length" value="0.0516" />
+    <xacro:property name="servo_5_width" value="0.020" />
+    <xacro:property name="servo_5_height" value="0.064" />
+
+    <material name="grey">
+        <color rgba="1 1 1 1" />
+    </material>
+
+
+    <link name="base_footprint" />
+
+    <link name="servo0_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 -${pi/2}" />
+            <geometry>
+                <box size="${servo_0_length} ${servo_0_width} ${servo_0_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 -${pi/2}" />
+            <geometry>
+                <box size="${servo_0_length} ${servo_0_width} ${servo_0_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo0_fixed_joint" type="fixed">
+        <origin xyz="0 -${servo_0_length} ${servo_0_height}"
+            rpy="0 0 0" />
+        <parent link="base_footprint" />
+        <child link="servo0_link" />
+    </joint>
+
+    <link name="joint0_link" />
+
+    <joint name="joint0" type="revolute">
+        <origin xyz="0 ${servo_0_length} ${servo_0_height / 2}" rpy="0 0 0" />
+        <parent link="servo0_link" />
+        <child link="joint0_link" />
+        <axis xyz="0 0 1" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <link name="servo1_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${servo_1_length} ${servo_1_width} ${servo_1_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${servo_1_length} ${servo_1_width} ${servo_1_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo1_fixed_joint" type="fixed">
+        <origin xyz="0 0 ${servo_1_height / 2}" rpy="0 0 0" />
+        <parent link="joint0_link" />
+        <child link="servo1_link" />
+    </joint>
+
+    <link name="joint1_link" />
+
+    <joint name="joint1" type="revolute">
+        <origin xyz="0 0 ${servo_1_height / 2}" rpy="0 0 0" />
+        <parent link="servo1_link" />
+        <child link="joint1_link" />
+        <axis xyz="1 0 0" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <link name="servo2_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${servo_2_length} ${servo_2_width} ${servo_2_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="${servo_2_length} ${servo_2_width} ${servo_2_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo2_fixed_joint" type="fixed">
+        <origin xyz="0 0 ${servo_2_height / 2}" rpy="0 0 0" />
+        <parent link="joint1_link" />
+        <child link="servo2_link" />
+    </joint>
+
+    <link name="joint2_link" />
+
+    <joint name="joint2" type="revolute">
+        <origin xyz="0 0 ${servo_2_height / 2}" rpy="0 0 0" />
+        <parent link="servo2_link" />
+        <child link="joint2_link" />
+        <axis xyz="1 0 0" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <link name="servo3_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
+            <geometry>
+                <box size="${servo_3_length} ${servo_3_width} ${servo_3_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
+            <geometry>
+                <box size="${servo_3_length} ${servo_3_width} ${servo_3_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo3_fixed_joint" type="fixed">
+        <origin xyz="0 0 ${servo_3_height / 2}" rpy="0 0 0" />
+        <parent link="joint2_link" />
+        <child link="servo3_link" />
+    </joint>
+
+    <link name="joint3_link" />
+
+    <joint name="joint3" type="revolute">
+        <origin xyz="0 ${servo_3_length / 2} ${servo_3_height / 2}" rpy="0 0 0" />
+        <parent link="servo3_link" />
+        <child link="joint3_link" />
+        <axis xyz="0 1 0" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <link name="servo4_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
+            <geometry>
+                <box size="${servo_4_length} ${servo_4_width} ${servo_4_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
+            <geometry>
+                <box size="${servo_4_length} ${servo_4_width} ${servo_4_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo4_fixed_joint" type="fixed">
+        <origin xyz="0 ${servo_4_height / 2} 0" rpy="0 ${pi/2} 0" />
+        <parent link="joint3_link" />
+        <child link="servo4_link" />
+    </joint>
+
+    <link name="joint4_link" />
+
+    <joint name="joint4" type="revolute">
+        <origin xyz="0 ${servo_4_length / 2} 0" rpy="0 0 0" />
+        <parent link="servo4_link" />
+        <child link="joint4_link" />
+        <axis xyz="0 0 1" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <link name="servo5_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+            <geometry>
+                <box size="${servo_5_length} ${servo_5_width} ${servo_5_height}" />
+            </geometry>
+            <material name="grey" />
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
+            <geometry>
+                <box size="${servo_5_length} ${servo_5_width} ${servo_5_height}" />
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="servo5_fixed_joint" type="fixed">
+        <origin xyz="0 ${servo_5_height / 2} 0" rpy="0 0 0" />
+        <parent link="joint4_link" />
+        <child link="servo5_link" />
+    </joint>
+
+    <link name="joint5_link" />
+    <joint name="joint5" type="revolute">
+        <origin xyz="${servo_5_length / 2} ${servo_5_height / 2}  0" rpy="0 0 0" />
+        <parent link="servo5_link" />
+        <child link="joint5_link" />
+        <axis xyz="1 0 0" />
+        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+    </joint>
+
+    <xacro:include filename="$(find arm_description)/urdf/ros2_control.xacro" />
+    <xacro:arm_ros2_control name="SixAxisServoArm" />
+
+</robot>

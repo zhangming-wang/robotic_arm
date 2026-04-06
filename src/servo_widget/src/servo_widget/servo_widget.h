@@ -14,6 +14,7 @@
 #include <QWidget>
 #include <map>
 #include <math.h>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -47,6 +48,7 @@ class ServoWidget : public QWidget {
     void on_append_info(const QString &info, bool is_error = false);
     void on_move();
     void on_calibration_ofs();
+    void on_enable_torque(bool enable);
 
   protected:
     void showEvent(QShowEvent *event) override;

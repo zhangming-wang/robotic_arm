@@ -1,6 +1,6 @@
 <library path="servo_hardware">
     <class name="servo_hardware/ServoHardware"
-        type="ServoHardware"
+        type="servo_hardware::ServoHardware"
         base_class_type="hardware_interface::SystemInterface">
         <description>
             The 6-axis arm hardware interface for serial servos.

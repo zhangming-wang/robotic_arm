@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="arm_ros2_control" params="name">
+        <ros2_control name="SixAxisServoArm" type="system">
+            <hardware>
+                <plugin>servo_hardware/ServoHardware</plugin>
+                <param name="device">/dev/ttyACM0</param>
+                <param name="baud_rate">1000000</param>
+            </hardware>
+
+            <xacro:macro name="configure_joint" params="joint_name id inverted">
+                <joint name="${joint_name}">
+                    <command_interface name="position" />
+                    <command_interface name="velocity" />
+                    <command_interface name="acceleration" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                    <param name="id">${id}</param>
+                    <param name="inverted">${inverted}</param>
+                </joint>
+            </xacro:macro>
+
+            <xacro:configure_joint joint_name="joint0" id="1" inverted="true" />
+            <xacro:configure_joint joint_name="joint1" id="2" inverted="false" />
+            <xacro:configure_joint joint_name="joint2" id="3" inverted="true" />
+            <xacro:configure_joint joint_name="joint3" id="4" inverted="true" />
+            <xacro:configure_joint joint_name="joint4" id="5" inverted="false" />
+            <xacro:configure_joint joint_name="joint5" id="6" inverted="true" />
+        </ros2_control>
+    </xacro:macro>
+</robot>

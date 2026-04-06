@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>servo_hardware</name>
+  <name>arm_description</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="zmwang@visionnav.com">dev</maintainer>
@@ -9,16 +9,13 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>hardware_interface</depend>
-  <depend>pluginlib</depend>
-  <depend>rclcpp</depend>
-  <depend>servo_manager</depend>
+  <depend>urdf</depend>
+  <depend>xacro</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
-    <hardware_interface plugin="${prefix}/export.xml" />
   </export>
 </package>

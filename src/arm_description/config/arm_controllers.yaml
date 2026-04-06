@@ -1,0 +1,46 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 25  # 硬件读写频率 (Hz)
+
+    # 1. 关节状态发布器：负责把舵机的实际位置发给 RViz
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # 2. 轨迹控制器：负责接收 MoveIt 的路径规划并执行
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      # type: position_controllers/JointGroupPositionController
+
+arm_controller:
+  ros__parameters:
+    joints:
+      - joint0
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+    command_interfaces:
+      - position
+      - velocity
+      - acceleration
+    state_interfaces:
+      - position
+      - velocity
+
+    interpolation_method: splines 
+
+    # --- 优化点 3: 设置容差 (解决震动和响应慢的关键) ---
+    constraints:
+      stopped_velocity_tolerance: 0.1 # 允许停止时有微小抖动，不触发报错
+      goal_time: 1.0                  # 允许比预期晚 0.8s 到达（缓解延迟感）
+      joint0: {trajectory: 0.5, goal: 0.05}
+      joint1: {trajectory: 0.5, goal: 0.05}
+      joint2: {trajectory: 0.5, goal: 0.05}
+      joint3: {trajectory: 0.5, goal: 0.05}
+      joint4: {trajectory: 0.5, goal: 0.05}
+      joint5: {trajectory: 0.5, goal: 0.05}
+
+    # --- 优化点 4: 发布频率 ---
+    state_publish_rate: 25.0
+    action_monitor_rate: 25.0

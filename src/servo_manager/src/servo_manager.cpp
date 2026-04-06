@@ -25,18 +25,17 @@ void ServoManager::stop(std::vector<uint8_t> &ids, uint8_t run_mode) {
         return;
     }
 
+    std::vector<int16_t> servo_pos(ids.size(), 0), servo_speed(ids.size(), 0);
+    std::vector<uint8_t> servo_acc(ids.size(), 0);
+
     if (run_mode == 0) {
-        std::vector<uint8_t> data(ids.size(), 0);
-        std::unique_lock lock(shared_mutex_);
-        sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
-    } else if (run_mode == 1) {
-        std::vector<int16_t> servo_pos(ids.size(), 0), servo_speed(ids.size(), 0);
-        std::vector<uint8_t> servo_acc(ids.size(), 0);
-        std::unique_lock lock(shared_mutex_);
-        sm_st_.SyncWritePosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data(), servo_acc.data());
-    } else {
-        std::cerr << "unsupported run_mode: " << (int)run_mode << std::endl;
+        for (int i = 0; i < ids.size(); ++i) {
+            servo_pos[i] = read_word(ids[i], SMS_STS_PRESENT_POSITION_L, 15);
+        }
     }
+
+    std::unique_lock lock(shared_mutex_);
+    sm_st_.SyncWritePosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data(), servo_acc.data());
 }
 
 bool ServoManager::move(std::vector<uint8_t> &ids, std::vector<double> &position, std::vector<double> &speed, std::vector<double> &acceleration) {
@@ -48,6 +47,10 @@ bool ServoManager::move(std::vector<uint8_t> &ids, std::vector<double> &position
     if (position.size() != ids.size() || speed.size() != ids.size() || acceleration.size() != ids.size()) {
         std::cerr << "size of position, speed, acceleration should be the same as size of ids!" << std::endl;
         return false;
+    }
+
+    if (!enable_torque_.load()) {
+        return true; // 直接返回成功，避免频繁调用move时反复启停扭力
     }
 
     std::vector<int16_t> servo_pos(position.size(), 0), servo_speed(speed.size(), 0);
@@ -79,14 +82,19 @@ bool ServoManager::get_state(std::vector<uint8_t> &ids, std::vector<double> &pos
 
     std::vector<int16_t> servo_pos(position.size(), 0), servo_speed(speed.size(), 0);
 
-    {
-        std::unique_lock lock(shared_mutex_);
-        bool success = sm_st_.SyncReadPosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data());
-        if (!success) {
-            std::cerr << "Failed to read servo state!" << std::endl;
-            return false;
-        }
+    for (int i = 0; i < ids.size(); ++i) {
+        servo_pos[i] = read_word(ids[i], SMS_STS_PRESENT_POSITION_L, 15);
+        servo_speed[i] = read_word(ids[i], SMS_STS_PRESENT_SPEED_L, 15);
     }
+
+    // {
+    //     std::unique_lock lock(shared_mutex_);
+    //     bool success = sm_st_.SyncReadPosEx(ids.data(), ids.size(), servo_pos.data(), servo_speed.data());
+    //     if (!success) {
+    //         std::cerr << "Failed to read servo state!" << std::endl;
+    //         return false;
+    //     }
+    // }
 
     for (size_t i = 0; i < position.size(); ++i) {
         position[i] = static_cast<double>(servo_pos[i] - 2048) / 2048 * M_PI;
@@ -102,9 +110,14 @@ bool ServoManager::enable_torque(std::vector<uint8_t> &ids, bool enable) {
         return false;
     }
 
-    std::vector<uint8_t> data(ids.size(), enable ? 1 : 0);
+    uint8_t data[ids.size()][1];
+    for (size_t i = 0; i < ids.size(); ++i) {
+        data[i][0] = enable ? 1 : 0;
+    }
+
+    enable_torque_.store(enable);
     std::unique_lock lock(shared_mutex_);
-    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
+    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, (uint8_t *)data, 1);
     return true;
 }
 
@@ -114,9 +127,13 @@ bool ServoManager::calibration_ofs(std::vector<uint8_t> &ids) {
         return false;
     }
 
-    std::vector<uint8_t> data(ids.size(), 128);
+    uint8_t data[ids.size()][1];
+    for (size_t i = 0; i < ids.size(); ++i) {
+        data[i][0] = 128;
+    }
+
     std::unique_lock lock(shared_mutex_);
-    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, data.data(), data.size());
+    sm_st_.snycWrite(ids.data(), ids.size(), SMSBL_TORQUE_ENABLE, (uint8_t *)data, 1);
     return true;
 }
 
@@ -308,6 +325,16 @@ int ServoManager::read_word(uint8_t id, uint8_t addr, uint8_t negBit) {
 
 int ServoManager::merge_two_byte(uint8_t DataL, uint8_t DataH, uint8_t negBit) {
     return _handle_word(sm_st_.SCS2Host(DataL, DataH), negBit);
+}
+
+void ServoManager::begin_record_time() {
+    record_start_time_ = std::chrono::steady_clock::now();
+}
+
+void ServoManager::end_record_time(std::string info) {
+    auto end_time = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - record_start_time_).count();
+    std::cout << info << " 耗时: " << elapsed / 1000.0 << " ms" << std::endl;
 }
 
 int ServoManager::_handle_word(int value, uint8_t negBit) {

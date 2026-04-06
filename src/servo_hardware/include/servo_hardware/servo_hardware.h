@@ -1,10 +1,13 @@
 #pragma once
 
 #include "pluginlib/class_list_macros.hpp" // 必须有这个，才能让插件被发现
+#include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "servo_manager/servo_manager.h"
 #include <hardware_interface/system_interface.hpp>
 #include <hardware_interface/types/hardware_interface_return_values.hpp>
+
+namespace servo_hardware {
 
 class ServoHardware : public hardware_interface::SystemInterface {
   public:
@@ -31,12 +34,16 @@ class ServoHardware : public hardware_interface::SystemInterface {
 
   private:
     std::vector<uint8_t> joint_ids_;
+    std::vector<std::string> joint_names_;
+    std::vector<int8_t> joint_dir_;
     std::vector<double> hw_positions_;
     std::vector<double> hw_velocities_;
-    std::vector<double> hw_cmds_pos_;
-    std::vector<double> hw_cmds_vel_;
-    std::vector<double> hw_cmds_acc_;
+    std::vector<double> hw_cmds_pos_, last_hw_cmds_pos_;
+    std::vector<double> hw_cmds_vel_, last_hw_cmds_vel_;
+    std::vector<double> hw_cmds_acc_, last_hw_cmds_acc_;
 
     std::string serial_port_;
     int baud_rate_;
 };
+
+} // namespace servo_hardware

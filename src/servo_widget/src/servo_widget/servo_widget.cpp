@@ -22,6 +22,7 @@ ServoWidget::ServoWidget(QWidget *parent)
     connect(ui->pushButton_move, &QPushButton::clicked, this, &ServoWidget::on_move);
     connect(ui->pushButton_clear, &QPushButton::clicked, ui->textEdit_info, &QTextEdit::clear);
     connect(ui->pushButton_calibration_ofs, &QPushButton::clicked, this, &ServoWidget::on_calibration_ofs);
+    connect(ui->checkBox_enable, &QCheckBox::toggled, this, &ServoWidget::on_enable_torque);
     connect(status_timer_, &QTimer::timeout, this, &ServoWidget::on_update_servo_status);
 
     QTimer::singleShot(500, [this]() { on_refresh_current_servo(); });
@@ -332,11 +333,24 @@ void ServoWidget::on_move() {
         acc.push_back(ui->doubleSpinBox_acc_servo_5->value());
     }
 
+    if (ids.empty()) {
+        on_append_info("请至少选择一个舵机", true);
+        return;
+    }
+
+    QString id_string = "写入舵机 ID=";
+    for (size_t i = 0; i < ids.size(); ++i) {
+        id_string += QString::number(ids[i]);
+        if (i != ids.size() - 1) {
+            id_string += ", ";
+        }
+    }
+
     bool success = ServoManager::instance().move(ids, position, speed, acc);
     if (success) {
-        on_append_info("写入多个舵机位置指令成功");
+        on_append_info(id_string + " 位置指令成功");
     } else {
-        on_append_info("写入多个舵机位置指令失败", true);
+        on_append_info(id_string + " 位置指令失败", true);
     }
 }
 
@@ -366,5 +380,59 @@ void ServoWidget::on_calibration_ofs() {
         on_append_info("设置中位成功");
     } else {
         on_append_info("设置中位失败", true);
+    }
+}
+
+void ServoWidget::on_enable_torque(bool enable) {
+    std::vector<uint8_t> ids;
+    if (ui->checkBox_servo_0->isChecked()) {
+        ids.push_back(1);
+    }
+    if (ui->checkBox_servo_1->isChecked()) {
+        ids.push_back(2);
+    }
+    if (ui->checkBox_servo_2->isChecked()) {
+        ids.push_back(3);
+    }
+    if (ui->checkBox_servo_3->isChecked()) {
+        ids.push_back(4);
+    }
+    if (ui->checkBox_servo_4->isChecked()) {
+        ids.push_back(5);
+    }
+    if (ui->checkBox_servo_5->isChecked()) {
+        ids.push_back(6);
+    }
+    if (ids.empty()) {
+        ui->checkBox_enable->blockSignals(true);
+        ui->checkBox_enable->setChecked(!enable);
+        ui->checkBox_enable->blockSignals(false);
+        on_append_info("请至少选择一个舵机", true);
+        return;
+    }
+
+    QString id_string = "舵机 ID=";
+    for (size_t i = 0; i < ids.size(); ++i) {
+        id_string += QString::number(ids[i]);
+        if (i != ids.size() - 1) {
+            id_string += ", ";
+        }
+    }
+
+    if (ServoManager::instance().enable_torque(ids, enable)) {
+        if (enable) {
+            on_append_info(id_string + " 使能成功");
+        } else {
+            on_append_info(id_string + " 失能成功");
+        }
+    } else {
+        ui->checkBox_enable->blockSignals(true);
+        ui->checkBox_enable->setChecked(!enable);
+        ui->checkBox_enable->blockSignals(false);
+        if (enable) {
+            on_append_info(id_string + " 使能失败", true);
+        } else {
+            on_append_info(id_string + " 失能失败", true);
+        }
     }
 }

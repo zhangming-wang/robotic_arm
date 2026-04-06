@@ -48,10 +48,16 @@ class ServoManager : public Singleton<ServoManager> {
 
     int merge_two_byte(uint8_t DataL, uint8_t DataH, uint8_t negBit = 0);
 
+    void begin_record_time();
+    void end_record_time(std::string info = "");
+
   private:
     SMS_STS sm_st_;
     std::atomic<bool> is_initialized_{false};
+    std::atomic<bool> enable_torque_{false};
     std::shared_mutex shared_mutex_;
 
     int _handle_word(int value, uint8_t negBit);
+
+    std::chrono::_V2::steady_clock::time_point record_start_time_;
 };

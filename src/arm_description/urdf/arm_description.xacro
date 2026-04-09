@@ -24,9 +24,11 @@
         </inertial>
     </xacro:macro>
 
-    <xacro:property name="servo_0_length" value="0.03511" />
+    <xacro:property name="joint_connect_radius" value="0.01" />
+
+    <xacro:property name="servo_0_length" value="0.04522" />
     <xacro:property name="servo_0_width" value="0.02472" />
-    <xacro:property name="servo_0_height" value="0.0485" />
+    <xacro:property name="servo_0_height" value="0.0350" />
     <xacro:property name="servo_0_mass" value="0.06" />
 
     <xacro:property name="servo_1_length" value="0.0442" />
@@ -41,7 +43,7 @@
 
     <xacro:property name="servo_3_length" value="0.0516" />
     <xacro:property name="servo_3_width" value="0.020" />
-    <xacro:property name="servo_3_height" value="0.064" />
+    <xacro:property name="servo_3_height" value="${joint_connect_radius + 0.064}" />
     <xacro:property name="servo_3_mass" value="0.08" />
 
     <xacro:property name="servo_4_length" value="0.0442" />
@@ -81,7 +83,7 @@
     </link>
 
     <joint name="servo0_fixed_joint" type="fixed">
-        <origin xyz="0 -${servo_0_length} ${servo_0_height}"
+        <origin xyz="0 -${servo_0_length / 2 - joint_connect_radius} ${servo_0_height / 2}"
             rpy="0 0 0" />
         <parent link="base_footprint" />
         <child link="servo0_link" />
@@ -92,7 +94,8 @@
     </link>
 
     <joint name="joint0" type="revolute">
-        <origin xyz="0 ${servo_0_length} ${servo_0_height / 2}" rpy="0 0 0" />
+        <origin xyz="0 ${servo_0_length / 2 - joint_connect_radius} ${servo_0_height / 2}"
+            rpy="0 0 0" />
         <parent link="servo0_link" />
         <child link="joint0_link" />
         <axis xyz="0 0 1" />
@@ -203,7 +206,8 @@
     </link>
 
     <joint name="joint3" type="revolute">
-        <origin xyz="0 ${servo_3_length / 2} ${servo_3_height / 2}" rpy="0 0 0" />
+        <origin xyz="0 ${servo_3_length / 2 } ${servo_3_height / 2 - joint_connect_radius}"
+            rpy="0 0 0" />
         <parent link="servo3_link" />
         <child link="joint3_link" />
         <axis xyz="0 1 0" />

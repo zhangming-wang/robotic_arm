@@ -157,8 +157,8 @@ hardware_interface::return_type ServoHardware::write(const rclcpp::Time &time, c
         auto servo_acc = hw_cmds_acc_;
         for (size_t i = 0; i < servo_pos.size(); ++i) {
             servo_pos[i] *= joint_dir_[i];
-            servo_speed[i] = 0;
-            servo_acc[i] = 0;
+            servo_speed[i] *= joint_dir_[i];
+            // servo_acc[i] = 0;
         }
 
         auto res = ServoManager::instance().move(joint_ids_, servo_pos, servo_speed, servo_acc);

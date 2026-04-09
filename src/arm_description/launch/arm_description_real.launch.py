@@ -108,7 +108,7 @@ def generate_launch_description():
         node_controller_manager,  # 必须显式加入这个节点
         load_joint_state_broadcaster,
         load_arm_controller,
-        rqt_joint_trajectory_controller_node,
+        # rqt_joint_trajectory_controller_node,
         rviz2_node,
     ]
 

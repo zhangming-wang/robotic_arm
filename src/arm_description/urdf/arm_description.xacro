@@ -1,29 +1,58 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="base">
+    <xacro:arg name="use_sim" default="false" />
+
+    <xacro:macro name="box_inertial" params="mass x y z">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="${mass}" />
+            <inertia
+                ixx="${mass * (y * y + z * z) / 12.0}"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="${mass * (x * x + z * z) / 12.0}"
+                iyz="0.0"
+                izz="${mass * (x * x + y * y) / 12.0}" />
+        </inertial>
+    </xacro:macro>
+
+    <xacro:macro name="tiny_inertial" params="mass:=0.005">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="${mass}" />
+            <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6" />
+        </inertial>
+    </xacro:macro>
 
     <xacro:property name="servo_0_length" value="0.03511" />
     <xacro:property name="servo_0_width" value="0.02472" />
     <xacro:property name="servo_0_height" value="0.0485" />
+    <xacro:property name="servo_0_mass" value="0.06" />
 
     <xacro:property name="servo_1_length" value="0.0442" />
     <xacro:property name="servo_1_width" value="0.020" />
     <xacro:property name="servo_1_height" value="0.03715" />
+    <xacro:property name="servo_1_mass" value="0.05" />
 
     <xacro:property name="servo_2_length" value="0.0556" />
     <xacro:property name="servo_2_width" value="0.020" />
     <xacro:property name="servo_2_height" value="0.064" />
+    <xacro:property name="servo_2_mass" value="0.08" />
 
     <xacro:property name="servo_3_length" value="0.0516" />
     <xacro:property name="servo_3_width" value="0.020" />
     <xacro:property name="servo_3_height" value="0.064" />
+    <xacro:property name="servo_3_mass" value="0.08" />
 
     <xacro:property name="servo_4_length" value="0.0442" />
     <xacro:property name="servo_4_width" value="0.020" />
     <xacro:property name="servo_4_height" value="0.03715" />
+    <xacro:property name="servo_4_mass" value="0.05" />
 
     <xacro:property name="servo_5_length" value="0.0516" />
     <xacro:property name="servo_5_width" value="0.020" />
     <xacro:property name="servo_5_height" value="0.064" />
+    <xacro:property name="servo_5_mass" value="0.08" />
 
     <material name="grey">
         <color rgba="1 1 1 1" />
@@ -33,6 +62,8 @@
     <link name="base_footprint" />
 
     <link name="servo0_link">
+        <xacro:box_inertial mass="${servo_0_mass}" x="${servo_0_length}" y="${servo_0_width}"
+            z="${servo_0_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="0 0 -${pi/2}" />
             <geometry>
@@ -56,7 +87,9 @@
         <child link="servo0_link" />
     </joint>
 
-    <link name="joint0_link" />
+    <link name="joint0_link">
+        <xacro:tiny_inertial />
+    </link>
 
     <joint name="joint0" type="revolute">
         <origin xyz="0 ${servo_0_length} ${servo_0_height / 2}" rpy="0 0 0" />
@@ -67,6 +100,8 @@
     </joint>
 
     <link name="servo1_link">
+        <xacro:box_inertial mass="${servo_1_mass}" x="${servo_1_length}" y="${servo_1_width}"
+            z="${servo_1_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
@@ -89,7 +124,9 @@
         <child link="servo1_link" />
     </joint>
 
-    <link name="joint1_link" />
+    <link name="joint1_link">
+        <xacro:tiny_inertial />
+    </link>
 
     <joint name="joint1" type="revolute">
         <origin xyz="0 0 ${servo_1_height / 2}" rpy="0 0 0" />
@@ -100,6 +137,8 @@
     </joint>
 
     <link name="servo2_link">
+        <xacro:box_inertial mass="${servo_2_mass}" x="${servo_2_length}" y="${servo_2_width}"
+            z="${servo_2_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
             <geometry>
@@ -122,7 +161,9 @@
         <child link="servo2_link" />
     </joint>
 
-    <link name="joint2_link" />
+    <link name="joint2_link">
+        <xacro:tiny_inertial />
+    </link>
 
     <joint name="joint2" type="revolute">
         <origin xyz="0 0 ${servo_2_height / 2}" rpy="0 0 0" />
@@ -133,6 +174,8 @@
     </joint>
 
     <link name="servo3_link">
+        <xacro:box_inertial mass="${servo_3_mass}" x="${servo_3_length}" y="${servo_3_width}"
+            z="${servo_3_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
             <geometry>
@@ -155,7 +198,9 @@
         <child link="servo3_link" />
     </joint>
 
-    <link name="joint3_link" />
+    <link name="joint3_link">
+        <xacro:tiny_inertial />
+    </link>
 
     <joint name="joint3" type="revolute">
         <origin xyz="0 ${servo_3_length / 2} ${servo_3_height / 2}" rpy="0 0 0" />
@@ -166,6 +211,8 @@
     </joint>
 
     <link name="servo4_link">
+        <xacro:box_inertial mass="${servo_4_mass}" x="${servo_4_length}" y="${servo_4_width}"
+            z="${servo_4_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="0 0 ${pi/2}" />
             <geometry>
@@ -188,7 +235,9 @@
         <child link="servo4_link" />
     </joint>
 
-    <link name="joint4_link" />
+    <link name="joint4_link">
+        <xacro:tiny_inertial />
+    </link>
 
     <joint name="joint4" type="revolute">
         <origin xyz="0 ${servo_4_length / 2} 0" rpy="0 0 0" />
@@ -199,6 +248,8 @@
     </joint>
 
     <link name="servo5_link">
+        <xacro:box_inertial mass="${servo_5_mass}" x="${servo_5_length}" y="${servo_5_width}"
+            z="${servo_5_height}" />
         <visual>
             <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
             <geometry>
@@ -221,7 +272,9 @@
         <child link="servo5_link" />
     </joint>
 
-    <link name="joint5_link" />
+    <link name="joint5_link">
+        <xacro:tiny_inertial />
+    </link>
     <joint name="joint5" type="revolute">
         <origin xyz="${servo_5_length / 2} ${servo_5_height / 2}  0" rpy="0 0 0" />
         <parent link="servo5_link" />
@@ -231,6 +284,6 @@
     </joint>
 
     <xacro:include filename="$(find arm_description)/urdf/ros2_control.xacro" />
-    <xacro:arm_ros2_control name="SixAxisServoArm" />
+    <xacro:arm_ros2_control name="SixAxisServoArm" use_sim="$(arg use_sim)" />
 
 </robot>

@@ -1,11 +1,16 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <xacro:macro name="arm_ros2_control" params="name">
+    <xacro:macro name="arm_ros2_control" params="name use_sim:=false">
         <ros2_control name="SixAxisServoArm" type="system">
             <hardware>
-                <plugin>servo_hardware/ServoHardware</plugin>
-                <param name="device">/dev/ttyACM0</param>
-                <param name="baud_rate">1000000</param>
+                <xacro:if value="${use_sim}">
+                    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+                </xacro:if>
+                <xacro:unless value="${use_sim}">
+                    <plugin>servo_hardware/ServoHardware</plugin>
+                    <param name="device">/dev/ttyACM0</param>
+                    <param name="baud_rate">1000000</param>
+                </xacro:unless>
             </hardware>
 
             <xacro:macro name="configure_joint" params="joint_name id inverted">

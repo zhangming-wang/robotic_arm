@@ -32,7 +32,7 @@ ament_target_dependencies(${PROJECT_NAME}
 )
 
 # 重要：注册插件描述文件
-pluginlib_export_plugin_description_file(hardware_interface export.xml)
+pluginlib_export_plugin_description_file(hardware_interface servo_hardware_plugins.xml)
 
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib
@@ -43,7 +43,7 @@ install(DIRECTORY include/
 )
 
 # 如果你有这个 xml 文件，也要安装它
-install(FILES export.xml
+install(FILES servo_hardware_plugins.xml
   DESTINATION share/${PROJECT_NAME}
 )
 

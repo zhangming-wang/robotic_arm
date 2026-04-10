@@ -41,6 +41,9 @@ class ServoHardware : public hardware_interface::SystemInterface {
     std::vector<double> hw_cmds_pos_, last_hw_cmds_pos_;
     std::vector<double> hw_cmds_vel_, last_hw_cmds_vel_;
     std::vector<double> hw_cmds_acc_, last_hw_cmds_acc_;
+    double write_postion_tolerance_ = 0;
+    double write_velocity_tolerance_ = 0;
+    double write_acceleration_tolerance_ = 0;
 
     std::string serial_port_;
     int baud_rate_;

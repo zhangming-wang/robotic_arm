@@ -1,3 +1,7 @@
+gz_ros2_control:
+  ros__parameters:
+    use_sim_time: True
+
 controller_manager:
   ros__parameters:
     update_rate: 1000  # 硬件读写频率 (Hz)
@@ -32,9 +36,9 @@ arm_controller:
 
     constraints:
       joint_limits:
-        joint0: {position_tolerance: 0.01, velocity_tolerance: 0.01}
-        joint1: {position_tolerance: 0.01, velocity_tolerance: 0.01}
-        joint2: {position_tolerance: 0.01, velocity_tolerance: 0.01}
-        joint3: {position_tolerance: 0.01, velocity_tolerance: 0.01}
-        joint4: {position_tolerance: 0.01, velocity_tolerance: 0.02}
-        joint5: {position_tolerance: 0.01, velocity_tolerance: 0.02}
+        joint0: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint1: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint2: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint3: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint4: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint5: {position_tolerance: 0.05, velocity_tolerance: 0.05}

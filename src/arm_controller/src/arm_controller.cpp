@@ -141,51 +141,29 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
 
     int command_size = command_interfaces_.size() / joints_.size();
 
-    // RCLCPP_INFO(get_node()->get_logger(), "当前轨迹点索引: %zu, 已流逝时间: %.3f秒",
-    //             current_trajectory_point_index_,
-    //             (time - trajectory_start_time_).seconds());
-
     if (has_active_trajectory_) {
         bool last_trajectory_finished = true;
+        double elapsed_seconds = (time - trajectory_start_time_).seconds();
 
-        // 计算从轨迹开始到现在流逝的时间
-
-        RCLCPP_INFO(get_node()->get_logger(), "当前轨迹点索引: %zu, 已流逝时间: %.3f秒",
-                    current_trajectory_point_index_,
-                    (time - trajectory_start_time_).seconds());
-
-        if (current_trajectory_point_index_ > 0) {
+        if (current_trajectory_point_index_ == 0) {
+            trajectory_start_time_ = time;
+        } else {
+            bool move_timeout = elapsed_seconds >= rclcpp::Duration(
+                                                       active_trajectory_.points[current_trajectory_point_index_ - 1].time_from_start)
+                                                       .seconds();
             if (update_by_time_) {
-                if (current_trajectory_point_index_ < active_trajectory_.points.size()) {
-
-                    RCLCPP_INFO(get_node()->get_logger(), "正在按时间调度轨迹点 %zu, 目标时间: %.3f秒",
-                                current_trajectory_point_index_,
-                                rclcpp::Duration(active_trajectory_.points[current_trajectory_point_index_].time_from_start).seconds());
-
-                    double elapsed_seconds = (time - trajectory_start_time_).seconds();
-
-                    last_trajectory_finished = elapsed_seconds >= rclcpp::Duration(
-                                                                      active_trajectory_.points[current_trajectory_point_index_].time_from_start)
-                                                                      .seconds();
-                }
+                last_trajectory_finished = move_timeout;
             } else {
-                const auto &prev_point = active_trajectory_.points[current_trajectory_point_index_ - 1];
-                for (size_t i = 0; i < joints_.size(); ++i) {
-                    if (fabs(current_positions_[i] - prev_point.positions[i]) > joint_tolerances_[joints_[i]].position) {
-                        last_trajectory_finished = false;
-                        RCLCPP_INFO(get_node()->get_logger(), "关节 %s 正在运行第 %zu 轨迹点，位置未达到目标: 当前 %.3f, 目标 %.3f, 偏差 %.3f, 容限 %.3f",
-                                    joints_[i].c_str(),
-                                    current_trajectory_point_index_ - 1,
-                                    current_positions_[i],
-                                    prev_point.positions[i],
-                                    fabs(current_positions_[i] - prev_point.positions[i]),
-                                    joint_tolerances_[joints_[i]].position);
-                        break;
+                if (!move_timeout) {
+                    const auto &prev_point = active_trajectory_.points[current_trajectory_point_index_ - 1];
+                    for (size_t i = 0; i < joints_.size(); ++i) {
+                        if (fabs(current_positions_[i] - prev_point.positions[i]) > joint_tolerances_[joints_[i]].position) {
+                            last_trajectory_finished = false;
+                            break;
+                        }
                     }
                 }
             }
-        } else {
-            // trajectory_start_time_ = time;
         }
 
         if (last_trajectory_finished) {
@@ -193,7 +171,6 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
                 finalize_trajectory("Trajectory execution completed.", GoalStatus::SUCCEEDED);
             } else {
                 const auto &point = active_trajectory_.points[current_trajectory_point_index_];
-
                 if (command_size == 1) {
                     target_positions_ = point.positions;
                 } else if (command_size == 2) {
@@ -387,6 +364,7 @@ void ArmController::init_trajectory(trajectory_msgs::msg::JointTrajectory normal
     active_trajectory_ = std::move(normalized);
     has_active_trajectory_ = true;
     current_trajectory_point_index_ = 0;
+    trajectory_start_time_ = get_node()->get_clock()->now();
 
     if (goal_handle)
         active_goal_ = goal_handle;

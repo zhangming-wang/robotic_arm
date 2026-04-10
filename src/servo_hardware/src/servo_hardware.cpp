@@ -11,6 +11,10 @@ ServoHardware::on_init(const hardware_interface::HardwareInfo &hardware_info) {
     // 1. 获取全局硬件参数
     serial_port_ = info_.hardware_parameters.at("device");
     baud_rate_ = std::stoi(info_.hardware_parameters.at("baud_rate"));
+    write_postion_tolerance_ = std::stod(info_.hardware_parameters.at("write_postion_tolerance"));
+    write_velocity_tolerance_ = std::stod(info_.hardware_parameters.at("write_velocity_tolerance"));
+    write_acceleration_tolerance_ = std::stod(info_.hardware_parameters.at("write_acceleration_tolerance"));
+
     RCLCPP_INFO(rclcpp::get_logger("ServoHardware"), "Parsed hardware parameters: device = %s, baud_rate = %d", serial_port_.c_str(), baud_rate_);
 
     joint_ids_.clear();
@@ -138,15 +142,15 @@ hardware_interface::return_type ServoHardware::read(const rclcpp::Time &time, co
 hardware_interface::return_type ServoHardware::write(const rclcpp::Time &time, const rclcpp::Duration &period) {
     bool is_changed = false;
     for (size_t i = 0; i < hw_cmds_pos_.size(); ++i) {
-        if (std::abs(hw_cmds_pos_[i] - last_hw_cmds_pos_[i]) > 0.01) {
+        if (std::abs(hw_cmds_pos_[i] - last_hw_cmds_pos_[i]) > write_postion_tolerance_) {
             is_changed = true;
             last_hw_cmds_pos_[i] = hw_cmds_pos_[i];
         }
-        if (std::abs(hw_cmds_vel_[i] - last_hw_cmds_vel_[i]) > 0.01) {
+        if (std::abs(hw_cmds_vel_[i] - last_hw_cmds_vel_[i]) > write_velocity_tolerance_) {
             is_changed = true;
             last_hw_cmds_vel_[i] = hw_cmds_vel_[i];
         }
-        if (std::abs(hw_cmds_acc_[i] - last_hw_cmds_acc_[i]) > 0.01) {
+        if (std::abs(hw_cmds_acc_[i] - last_hw_cmds_acc_[i]) > write_acceleration_tolerance_) {
             is_changed = true;
             last_hw_cmds_acc_[i] = hw_cmds_acc_[i];
         }

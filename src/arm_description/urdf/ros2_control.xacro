@@ -11,6 +11,9 @@
                     <plugin>servo_hardware/ServoHardware</plugin>
                     <param name="device">/dev/ttyACM0</param>
                     <param name="baud_rate">1000000</param>
+                    <param name="write_postion_tolerance">0.001</param>
+                    <param name="write_velocity_tolerance">0.001</param>
+                    <param name="write_acceleration_tolerance">0.001</param>
                 </xacro:unless>
             </hardware>
 

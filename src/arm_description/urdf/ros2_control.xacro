@@ -5,6 +5,7 @@
             <hardware>
                 <xacro:if value="${use_sim}">
                     <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+                    <param name="position_proportional_gain">50.0</param>
                 </xacro:if>
                 <xacro:unless value="${use_sim}">
                     <plugin>servo_hardware/ServoHardware</plugin>

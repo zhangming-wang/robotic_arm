@@ -25,44 +25,66 @@
     </xacro:macro>
 
     <xacro:property name="joint_connect_radius" value="0.01" />
+    <!-- <xacro:property name="pi" value="3.14159265358979" /> -->
+    <xacro:property name="max_effort" value="2.45" />
+    <xacro:property name="max_velocity" value="4.72" />
 
     <xacro:property name="servo_0_length" value="0.04522" />
     <xacro:property name="servo_0_width" value="0.02472" />
     <xacro:property name="servo_0_height" value="0.0350" />
-    <xacro:property name="servo_0_mass" value="0.06" />
+    <xacro:property name="servo_0_mass" value="0.05" />
+    <xacro:property name="servo_0_min_pos" value="-${pi}" />
+    <xacro:property name="servo_0_max_pos" value="${pi}" />
 
     <xacro:property name="servo_1_length" value="0.0442" />
     <xacro:property name="servo_1_width" value="0.020" />
     <xacro:property name="servo_1_height" value="0.03715" />
     <xacro:property name="servo_1_mass" value="0.05" />
+    <xacro:property name="servo_1_min_pos" value="-${pi/2}" />
+    <xacro:property name="servo_1_max_pos" value="${pi/2}" />
 
     <xacro:property name="servo_2_length" value="0.0556" />
     <xacro:property name="servo_2_width" value="0.020" />
     <xacro:property name="servo_2_height" value="0.064" />
     <xacro:property name="servo_2_mass" value="0.08" />
+    <xacro:property name="servo_2_min_pos" value="-${pi/2}" />
+    <xacro:property name="servo_2_max_pos" value="${pi/2}" />
 
     <xacro:property name="servo_3_length" value="0.0516" />
     <xacro:property name="servo_3_width" value="0.020" />
     <xacro:property name="servo_3_height" value="${joint_connect_radius + 0.064}" />
     <xacro:property name="servo_3_mass" value="0.08" />
+    <xacro:property name="servo_3_min_pos" value="-${pi/2}" />
+    <xacro:property name="servo_3_max_pos" value="${pi/2}" />
 
     <xacro:property name="servo_4_length" value="0.0442" />
     <xacro:property name="servo_4_width" value="0.020" />
     <xacro:property name="servo_4_height" value="0.03715" />
     <xacro:property name="servo_4_mass" value="0.05" />
+    <xacro:property name="servo_4_min_pos" value="-${pi/2}" />
+    <xacro:property name="servo_4_max_pos" value="${pi/2}" />
 
     <xacro:property name="servo_5_length" value="0.0516" />
     <xacro:property name="servo_5_width" value="0.020" />
     <xacro:property name="servo_5_height" value="0.064" />
     <xacro:property name="servo_5_mass" value="0.08" />
+    <xacro:property name="servo_5_min_pos" value="-${pi}" />
+    <xacro:property name="servo_5_max_pos" value="${pi}" />
 
-    <material name="grey">
-        <color rgba="1 1 1 1" />
+    <material name="material_color">
+        <color rgba="1 1 0 1" />
     </material>
 
-
+    <link name="world" />
     <link name="base_footprint" />
 
+    <joint name="world_to_base" type="fixed">
+        <parent link="world" />
+        <child link="base_footprint" />
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- servo0_link -->
     <link name="servo0_link">
         <xacro:box_inertial mass="${servo_0_mass}" x="${servo_0_length}" y="${servo_0_width}"
             z="${servo_0_height}" />
@@ -71,7 +93,7 @@
             <geometry>
                 <box size="${servo_0_length} ${servo_0_width} ${servo_0_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -89,19 +111,23 @@
         <child link="servo0_link" />
     </joint>
 
+    <!-- joint0_link 虚拟轴 -->
     <link name="joint0_link">
         <xacro:tiny_inertial />
     </link>
 
+    <!-- 旋转关节 joint0 -->
     <joint name="joint0" type="revolute">
         <origin xyz="0 ${servo_0_length / 2 - joint_connect_radius} ${servo_0_height / 2}"
             rpy="0 0 0" />
         <parent link="servo0_link" />
         <child link="joint0_link" />
         <axis xyz="0 0 1" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_0_min_pos}" upper="${servo_0_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
+    <!-- servo1_link -->
     <link name="servo1_link">
         <xacro:box_inertial mass="${servo_1_mass}" x="${servo_1_length}" y="${servo_1_width}"
             z="${servo_1_height}" />
@@ -110,7 +136,7 @@
             <geometry>
                 <box size="${servo_1_length} ${servo_1_width} ${servo_1_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -121,24 +147,29 @@
         </collision>
     </link>
 
-    <joint name="servo1_fixed_joint" type="fixed">
+    <!-- 固定偏移：从 joint0_link 到 servo1_link -->
+    <joint name="servo1_offset" type="fixed">
         <origin xyz="0 0 ${servo_1_height / 2}" rpy="0 0 0" />
         <parent link="joint0_link" />
         <child link="servo1_link" />
     </joint>
 
+    <!-- joint1_link 虚拟轴 -->
     <link name="joint1_link">
         <xacro:tiny_inertial />
     </link>
 
+    <!-- 旋转关节 joint1 -->
     <joint name="joint1" type="revolute">
         <origin xyz="0 0 ${servo_1_height / 2}" rpy="0 0 0" />
         <parent link="servo1_link" />
         <child link="joint1_link" />
         <axis xyz="1 0 0" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_1_min_pos}" upper="${servo_1_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
+    <!-- servo2_link -->
     <link name="servo2_link">
         <xacro:box_inertial mass="${servo_2_mass}" x="${servo_2_length}" y="${servo_2_width}"
             z="${servo_2_height}" />
@@ -147,7 +178,7 @@
             <geometry>
                 <box size="${servo_2_length} ${servo_2_width} ${servo_2_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -158,24 +189,29 @@
         </collision>
     </link>
 
-    <joint name="servo2_fixed_joint" type="fixed">
+    <!-- 固定偏移：从 joint1_link 到 servo2_link -->
+    <joint name="servo2_offset" type="fixed">
         <origin xyz="0 0 ${servo_2_height / 2}" rpy="0 0 0" />
         <parent link="joint1_link" />
         <child link="servo2_link" />
     </joint>
 
+    <!-- joint2_link 虚拟轴 -->
     <link name="joint2_link">
         <xacro:tiny_inertial />
     </link>
 
+    <!-- 旋转关节 joint2 -->
     <joint name="joint2" type="revolute">
         <origin xyz="0 0 ${servo_2_height / 2}" rpy="0 0 0" />
         <parent link="servo2_link" />
         <child link="joint2_link" />
         <axis xyz="1 0 0" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_2_min_pos}" upper="${servo_2_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
+    <!-- servo3_link -->
     <link name="servo3_link">
         <xacro:box_inertial mass="${servo_3_mass}" x="${servo_3_length}" y="${servo_3_width}"
             z="${servo_3_height}" />
@@ -184,7 +220,7 @@
             <geometry>
                 <box size="${servo_3_length} ${servo_3_width} ${servo_3_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -195,25 +231,30 @@
         </collision>
     </link>
 
-    <joint name="servo3_fixed_joint" type="fixed">
+    <!-- 固定偏移：从 joint2_link 到 servo3_link -->
+    <joint name="servo3_offset" type="fixed">
         <origin xyz="0 0 ${servo_3_height / 2}" rpy="0 0 0" />
         <parent link="joint2_link" />
         <child link="servo3_link" />
     </joint>
 
+    <!-- joint3_link 虚拟轴 -->
     <link name="joint3_link">
         <xacro:tiny_inertial />
     </link>
 
+    <!-- 旋转关节 joint3 -->
     <joint name="joint3" type="revolute">
-        <origin xyz="0 ${servo_3_length / 2 } ${servo_3_height / 2 - joint_connect_radius}"
+        <origin xyz="0 ${servo_3_length / 2} ${servo_3_height / 2 - joint_connect_radius}"
             rpy="0 0 0" />
         <parent link="servo3_link" />
         <child link="joint3_link" />
         <axis xyz="0 1 0" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_3_min_pos}" upper="${servo_3_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
+    <!-- servo4_link -->
     <link name="servo4_link">
         <xacro:box_inertial mass="${servo_4_mass}" x="${servo_4_length}" y="${servo_4_width}"
             z="${servo_4_height}" />
@@ -222,7 +263,7 @@
             <geometry>
                 <box size="${servo_4_length} ${servo_4_width} ${servo_4_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -233,24 +274,29 @@
         </collision>
     </link>
 
-    <joint name="servo4_fixed_joint" type="fixed">
+    <!-- 固定偏移：从 joint3_link 到 servo4_link -->
+    <joint name="servo4_offset" type="fixed">
         <origin xyz="0 ${servo_4_height / 2} 0" rpy="0 ${pi/2} 0" />
         <parent link="joint3_link" />
         <child link="servo4_link" />
     </joint>
 
+    <!-- joint4_link 虚拟轴 -->
     <link name="joint4_link">
         <xacro:tiny_inertial />
     </link>
 
+    <!-- 旋转关节 joint4 -->
     <joint name="joint4" type="revolute">
         <origin xyz="0 ${servo_4_length / 2} 0" rpy="0 0 0" />
         <parent link="servo4_link" />
         <child link="joint4_link" />
         <axis xyz="0 0 1" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_4_min_pos}" upper="${servo_4_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
+    <!-- servo5_link -->
     <link name="servo5_link">
         <xacro:box_inertial mass="${servo_5_mass}" x="${servo_5_length}" y="${servo_5_width}"
             z="${servo_5_height}" />
@@ -259,7 +305,7 @@
             <geometry>
                 <box size="${servo_5_length} ${servo_5_width} ${servo_5_height}" />
             </geometry>
-            <material name="grey" />
+            <material name="material_color" />
         </visual>
 
         <collision>
@@ -270,24 +316,75 @@
         </collision>
     </link>
 
-    <joint name="servo5_fixed_joint" type="fixed">
+    <!-- 固定偏移：从 joint4_link 到 servo5_link -->
+    <joint name="servo5_offset" type="fixed">
         <origin xyz="0 ${servo_5_height / 2} 0" rpy="0 0 0" />
         <parent link="joint4_link" />
         <child link="servo5_link" />
     </joint>
 
+    <!-- joint5_link 虚拟轴 -->
     <link name="joint5_link">
         <xacro:tiny_inertial />
     </link>
+
+    <!-- 旋转关节 joint5 -->
     <joint name="joint5" type="revolute">
-        <origin xyz="${servo_5_length / 2} ${servo_5_height / 2}  0" rpy="0 0 0" />
+        <origin xyz="${servo_5_length / 2} ${servo_5_height / 2} 0" rpy="0 0 0" />
         <parent link="servo5_link" />
         <child link="joint5_link" />
         <axis xyz="1 0 0" />
-        <limit lower="-3.14159" upper="3.14159" effort="1.5" velocity="6.28" />
+        <limit lower="${servo_5_min_pos}" upper="${servo_5_max_pos}" effort="${max_effort}"
+            velocity="${max_velocity}" />
     </joint>
 
     <xacro:include filename="$(find arm_description)/urdf/ros2_control.xacro" />
     <xacro:arm_ros2_control name="SixAxisServoArm" use_sim="$(arg use_sim)" />
+
+    <xacro:if value="$(arg use_sim)">
+        <!-- 仿真时禁用重力，避免控制器激活前机械臂倒塌 -->
+        <gazebo reference="servo0_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint0_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="servo1_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint1_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="servo2_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint2_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="servo3_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint3_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="servo4_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint4_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="servo5_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo reference="joint5_link">
+            <gravity>false</gravity>
+        </gazebo>
+        <gazebo>
+            <plugin filename="libgz_ros2_control-system.so"
+                name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+                <parameters>$(find arm_description)/config/arm_controllers.yaml</parameters>
+            </plugin>
+        </gazebo>
+    </xacro:if>
 
 </robot>

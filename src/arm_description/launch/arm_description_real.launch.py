@@ -4,6 +4,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import Command, LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import TimerAction
 from launch.actions import RegisterEventHandler
@@ -16,7 +17,13 @@ def generate_launch_description():
 
     pkg_share = get_package_share_directory("arm_description")
 
-    use_sim_time = LaunchConfiguration("use_sim_time", default="false")
+    start_rviz_arg = DeclareLaunchArgument(
+        "start_rviz",
+        default_value="true",
+        description="Whether to start RViz in arm_description bringup.",
+    )
+
+    start_rviz = LaunchConfiguration("start_rviz", default="true")
 
     xacro_file = os.path.join(pkg_share, "urdf", "arm_description.xacro")
     rviz_config_path = os.path.join(pkg_share, "config", "display_settings.rviz")
@@ -29,7 +36,7 @@ def generate_launch_description():
         executable="robot_state_publisher",
         parameters=[
             robot_description,
-            {"use_sim_time": use_sim_time},
+            {"use_sim_time": False},
         ],
         name="robot_state_publisher",
         output="screen",
@@ -54,6 +61,7 @@ def generate_launch_description():
             robot_description,
             controller_config,
         ],
+        parameters=[{"use_sim_time": False}],
         output="both",
     )
 
@@ -62,6 +70,7 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=["joint_state_broadcaster"],
+        parameters=[{"use_sim_time": False}],
     )
 
     # 激活 arm_controller
@@ -69,6 +78,7 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=["arm_controller"],
+        parameters=[{"use_sim_time": False}],
     )
 
     load_joint_state_broadcaster = RegisterEventHandler(
@@ -92,7 +102,8 @@ def generate_launch_description():
         name="rviz2",
         arguments=["-d", rviz_config_path],
         output="screen",
-        parameters=[{"use_sim_time": use_sim_time}],
+        condition=IfCondition(start_rviz),
+        parameters=[{"use_sim_time": False}],
     )
 
     rqt_joint_trajectory_controller_node = Node(
@@ -100,10 +111,11 @@ def generate_launch_description():
         executable="rqt_joint_trajectory_controller",
         name="rqt_joint_trajectory_controller",
         output="screen",
-        parameters=[{"use_sim_time": use_sim_time}],
+        parameters=[{"use_sim_time": False}],
     )
 
     nodes_lis = [
+        start_rviz_arg,
         robot_state_publisher_node,
         node_controller_manager,  # 必须显式加入这个节点
         load_joint_state_broadcaster,

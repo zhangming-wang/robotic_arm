@@ -26,7 +26,7 @@ controller_interface::InterfaceConfiguration ArmController::command_interface_co
     for (const auto &joint : joints_) {
         cfg.names.push_back(joint + "/position");
         cfg.names.push_back(joint + "/velocity");
-        cfg.names.push_back(joint + "/acceleration");
+        // cfg.names.push_back(joint + "/acceleration");
     }
     return cfg;
 }
@@ -139,30 +139,53 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
         current_velocities_[i] = state_interfaces_[i * 2 + 1].get_value();
     }
 
+    int command_size = command_interfaces_.size() / joints_.size();
+
+    // RCLCPP_INFO(get_node()->get_logger(), "当前轨迹点索引: %zu, 已流逝时间: %.3f秒",
+    //             current_trajectory_point_index_,
+    //             (time - trajectory_start_time_).seconds());
+
     if (has_active_trajectory_) {
         bool last_trajectory_finished = true;
 
         // 计算从轨迹开始到现在流逝的时间
 
+        RCLCPP_INFO(get_node()->get_logger(), "当前轨迹点索引: %zu, 已流逝时间: %.3f秒",
+                    current_trajectory_point_index_,
+                    (time - trajectory_start_time_).seconds());
+
         if (current_trajectory_point_index_ > 0) {
             if (update_by_time_) {
                 if (current_trajectory_point_index_ < active_trajectory_.points.size()) {
+
+                    RCLCPP_INFO(get_node()->get_logger(), "正在按时间调度轨迹点 %zu, 目标时间: %.3f秒",
+                                current_trajectory_point_index_,
+                                rclcpp::Duration(active_trajectory_.points[current_trajectory_point_index_].time_from_start).seconds());
+
                     double elapsed_seconds = (time - trajectory_start_time_).seconds();
 
                     last_trajectory_finished = elapsed_seconds >= rclcpp::Duration(
                                                                       active_trajectory_.points[current_trajectory_point_index_].time_from_start)
                                                                       .seconds();
                 }
-                // else: index 已超出所有点，保持 last_trajectory_finished=true，让下面的完成逻辑处理
             } else {
                 const auto &prev_point = active_trajectory_.points[current_trajectory_point_index_ - 1];
                 for (size_t i = 0; i < joints_.size(); ++i) {
                     if (fabs(current_positions_[i] - prev_point.positions[i]) > joint_tolerances_[joints_[i]].position) {
                         last_trajectory_finished = false;
+                        RCLCPP_INFO(get_node()->get_logger(), "关节 %s 正在运行第 %zu 轨迹点，位置未达到目标: 当前 %.3f, 目标 %.3f, 偏差 %.3f, 容限 %.3f",
+                                    joints_[i].c_str(),
+                                    current_trajectory_point_index_ - 1,
+                                    current_positions_[i],
+                                    prev_point.positions[i],
+                                    fabs(current_positions_[i] - prev_point.positions[i]),
+                                    joint_tolerances_[joints_[i]].position);
                         break;
                     }
                 }
             }
+        } else {
+            // trajectory_start_time_ = time;
         }
 
         if (last_trajectory_finished) {
@@ -170,9 +193,17 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
                 finalize_trajectory("Trajectory execution completed.", GoalStatus::SUCCEEDED);
             } else {
                 const auto &point = active_trajectory_.points[current_trajectory_point_index_];
-                target_positions_ = point.positions;
-                target_velocities_ = point.velocities;
-                target_accelerations_ = point.accelerations;
+
+                if (command_size == 1) {
+                    target_positions_ = point.positions;
+                } else if (command_size == 2) {
+                    target_positions_ = point.positions;
+                    target_velocities_ = point.velocities;
+                } else if (command_size == 3) {
+                    target_positions_ = point.positions;
+                    target_velocities_ = point.velocities;
+                    target_accelerations_ = point.accelerations;
+                }
                 current_trajectory_point_index_++;
             }
         }
@@ -182,9 +213,16 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
         if (!std::isfinite(target_positions_[i]))
             continue;
 
-        command_interfaces_[i * 3].set_value(target_positions_[i]);
-        command_interfaces_[i * 3 + 1].set_value(target_velocities_[i]);
-        command_interfaces_[i * 3 + 2].set_value(target_accelerations_[i]);
+        if (command_size == 1) {
+            command_interfaces_[i].set_value(target_positions_[i]);
+        } else if (command_size == 2) {
+            command_interfaces_[i * 2].set_value(target_positions_[i]);
+            command_interfaces_[i * 2 + 1].set_value(target_velocities_[i]);
+        } else if (command_size == 3) {
+            command_interfaces_[i * 3].set_value(target_positions_[i]);
+            command_interfaces_[i * 3 + 1].set_value(target_velocities_[i]);
+            command_interfaces_[i * 3 + 2].set_value(target_accelerations_[i]);
+        }
     }
 
     return controller_interface::return_type::OK;
@@ -315,6 +353,8 @@ void ArmController::finalize_trajectory(const std::string &reason, const GoalSta
     has_active_trajectory_ = false;
     current_trajectory_point_index_ = 0;
 
+    RCLCPP_INFO(get_node()->get_logger(), "Trajectory finalized: %s", reason.c_str());
+
     if (!active_goal_) {
         return;
     }
@@ -347,10 +387,13 @@ void ArmController::init_trajectory(trajectory_msgs::msg::JointTrajectory normal
     active_trajectory_ = std::move(normalized);
     has_active_trajectory_ = true;
     current_trajectory_point_index_ = 0;
-    trajectory_start_time_ = get_node()->now();
 
     if (goal_handle)
         active_goal_ = goal_handle;
+
+    RCLCPP_INFO(get_node()->get_logger(), "New trajectory initialized with %zu points. First point at %.3f seconds.",
+                active_trajectory_.points.size(),
+                rclcpp::Duration(active_trajectory_.points.front().time_from_start).seconds());
 }
 
 } // namespace arm_controller

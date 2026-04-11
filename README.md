@@ -8,7 +8,7 @@
 - 真实舵机硬件驱动
 - 调试舵机软件
 
-用于学习ros2_control + movit。
+本来项目用于学习ros2_control + movit，跑仿真就够了。
 ---
 
 ## ✨ 功能特性

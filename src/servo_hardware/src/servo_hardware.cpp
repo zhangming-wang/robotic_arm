@@ -1,4 +1,5 @@
 #include "servo_hardware/servo_hardware.h"
+#include <fmt/ranges.h>
 
 namespace servo_hardware {
 
@@ -14,8 +15,11 @@ ServoHardware::on_init(const hardware_interface::HardwareInfo &hardware_info) {
     write_postion_tolerance_ = std::stod(info_.hardware_parameters.at("write_postion_tolerance"));
     write_velocity_tolerance_ = std::stod(info_.hardware_parameters.at("write_velocity_tolerance"));
     write_acceleration_tolerance_ = std::stod(info_.hardware_parameters.at("write_acceleration_tolerance"));
+    update_seconds_ = 1000.0 / std::stod(info_.hardware_parameters.at("update_rate"));
 
     RCLCPP_INFO(rclcpp::get_logger("ServoHardware"), "Parsed hardware parameters: device = %s, baud_rate = %d", serial_port_.c_str(), baud_rate_);
+    RCLCPP_INFO(rclcpp::get_logger("ServoHardware"), "Parsed hardware parameters: write_postion_tolerance = %f, write_velocity_tolerance = %f, write_acceleration_tolerance = %f, update_seconds = %f",
+                write_postion_tolerance_, write_velocity_tolerance_, write_acceleration_tolerance_, update_seconds_);
 
     joint_ids_.clear();
     joint_names_.clear();
@@ -98,6 +102,7 @@ ServoHardware::CallbackReturn ServoHardware::on_activate(const rclcpp_lifecycle:
             last_hw_cmds_vel_[i] = hw_cmds_vel_[i];
             last_hw_cmds_acc_[i] = hw_cmds_acc_[i];
         }
+        start_time_ = rclcpp::Clock(RCL_ROS_TIME).now();
         if (ServoManager::instance().enable_torque(joint_ids_, true)) {
             RCLCPP_INFO(rclcpp::get_logger("ServoHardware"), "Enabled torque for joints on activation");
             return CallbackReturn::SUCCESS;
@@ -127,6 +132,10 @@ hardware_interface::return_type ServoHardware::prepare_command_mode_switch(
 }
 
 hardware_interface::return_type ServoHardware::read(const rclcpp::Time &time, const rclcpp::Duration &period) {
+    if (time - start_time_ < rclcpp::Duration(std::chrono::microseconds(static_cast<int64_t>(update_seconds_ * 1000)))) {
+        return hardware_interface::return_type::OK;
+    }
+
     auto res = ServoManager::instance().get_state(joint_ids_, hw_positions_, hw_velocities_);
     if (!res) {
         return hardware_interface::return_type::ERROR;
@@ -140,6 +149,12 @@ hardware_interface::return_type ServoHardware::read(const rclcpp::Time &time, co
 }
 
 hardware_interface::return_type ServoHardware::write(const rclcpp::Time &time, const rclcpp::Duration &period) {
+    if (time - start_time_ < rclcpp::Duration(std::chrono::microseconds(static_cast<int64_t>(update_seconds_ * 1000)))) {
+        return hardware_interface::return_type::OK;
+    } else {
+        start_time_ = rclcpp::Clock(RCL_ROS_TIME).now();
+    }
+
     bool is_changed = false;
     for (size_t i = 0; i < hw_cmds_pos_.size(); ++i) {
         if (std::abs(hw_cmds_pos_[i] - last_hw_cmds_pos_[i]) > write_postion_tolerance_) {
@@ -164,6 +179,9 @@ hardware_interface::return_type ServoHardware::write(const rclcpp::Time &time, c
             servo_speed[i] *= joint_dir_[i];
             // servo_acc[i] = 0;
         }
+
+        RCLCPP_INFO(rclcpp::get_logger("ServoHardware"), "Writing commands to servos: positions = %s, velocities = %s, accelerations = %s",
+                    fmt::format("{}", fmt::join(servo_pos, ", ")).c_str(), fmt::format("{}", fmt::join(servo_speed, ", ")).c_str(), fmt::format("{}", fmt::join(servo_acc, ", ")).c_str());
 
         auto res = ServoManager::instance().move(joint_ids_, servo_pos, servo_speed, servo_acc);
         if (!res) {

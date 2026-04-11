@@ -1,7 +1,3 @@
-gz_ros2_control:
-  ros__parameters:
-    use_sim_time: True
-
 controller_manager:
   ros__parameters:
     update_rate: 1000  # 硬件读写频率 (Hz)
@@ -16,8 +12,8 @@ controller_manager:
       # type: position_controllers/JointGroupPositionController
 
 arm_controller:
-  ros__parameters:
-    update_by_time: true
+  ros__parameters:    
+    servo_velocity: 1.0 # 不设置=非舵机模式，用于仿真，launch文件会替换为nan，<0=使用规划速度；>0=使用设定速度(rad/s)
 
     joints:
       - joint0
@@ -36,9 +32,9 @@ arm_controller:
 
     constraints:
       joint_limits:
-        joint0: {position_tolerance: 0.05, velocity_tolerance: 0.05}
-        joint1: {position_tolerance: 0.05, velocity_tolerance: 0.05}
-        joint2: {position_tolerance: 0.05, velocity_tolerance: 0.05}
-        joint3: {position_tolerance: 0.05, velocity_tolerance: 0.05}
-        joint4: {position_tolerance: 0.05, velocity_tolerance: 0.05}
-        joint5: {position_tolerance: 0.05, velocity_tolerance: 0.05}
+        joint0: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint1: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint2: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint3: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint4: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint5: {position_tolerance: 0.1, velocity_tolerance: 0.1}

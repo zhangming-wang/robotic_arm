@@ -1,16 +1,12 @@
 import os
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import Command, LaunchConfiguration
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
-from launch.conditions import IfCondition
+
 from ament_index_python.packages import get_package_share_directory
-from launch.actions import TimerAction
-from launch.actions import RegisterEventHandler
-from launch.event_handlers import OnProcessStart, OnProcessExit
-from launch.event_handlers import OnShutdown, OnProcessExit
-from launch.actions import LogInfo
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler
+from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit, OnProcessStart
+from launch.substitutions import Command, LaunchConfiguration
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -27,7 +23,7 @@ def generate_launch_description():
 
     xacro_file = os.path.join(pkg_share, "urdf", "arm_description.xacro")
     rviz_config_path = os.path.join(pkg_share, "config", "display_settings.rviz")
-    controller_config = os.path.join(pkg_share, "config", "arm_controllers.yaml")
+    controller_config = os.path.join(pkg_share, "config", "arm_controllers_real.yaml")
 
     robot_description = {"robot_description": Command(["xacro ", xacro_file])}
 
@@ -60,8 +56,8 @@ def generate_launch_description():
         parameters=[
             robot_description,
             controller_config,
+            {"use_sim_time": False},
         ],
-        parameters=[{"use_sim_time": False}],
         output="both",
     )
 

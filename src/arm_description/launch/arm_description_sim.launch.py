@@ -30,7 +30,7 @@ def generate_launch_description():
     gazebo_world_path = os.path.join(pkg_share, "world", "empty.sdf")
     xacro_file = os.path.join(pkg_share, "urdf", "arm_description.xacro")
     rviz_config_path = os.path.join(pkg_share, "config", "display_settings.rviz")
-    controller_config = os.path.join(pkg_share, "config", "arm_controllers.yaml")
+    controller_config = os.path.join(pkg_share, "config", "arm_controllers_sim.yaml")
 
     robot_description = {
         "robot_description": Command(

@@ -3,6 +3,7 @@
 #include <atomic>
 #include <control_msgs/action/follow_joint_trajectory.hpp>
 #include <controller_interface/controller_interface.hpp>
+#include <limits>
 #include <mutex>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -61,7 +62,9 @@ class ArmController : public controller_interface::ControllerInterface {
     rclcpp::Time trajectory_start_time_;
     size_t current_trajectory_point_index_{0};
     bool has_active_trajectory_{false};
-    bool update_by_time_{false};
+
+    // NaN: 非舵机模式；< 0: 使用规划速度；> 0: 使用设定速度
+    double servo_velocity_{std::numeric_limits<double>::quiet_NaN()};
 
     rclcpp::Subscription<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_sub_;
     rclcpp_action::Server<FollowJointTrajectory>::SharedPtr action_server_;

@@ -3,6 +3,7 @@
 #include "pluginlib/class_list_macros.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <unordered_map>
 
@@ -11,7 +12,7 @@ namespace arm_controller {
 controller_interface::CallbackReturn ArmController::on_init() {
     try {
         auto_declare<std::vector<std::string>>("joints", {});
-        auto_declare<bool>("update_by_time", false);
+        auto_declare<double>("servo_velocity", std::numeric_limits<double>::quiet_NaN());
     } catch (const std::exception &e) {
         RCLCPP_ERROR(get_node()->get_logger(), "on_init failed: %s", e.what());
         return controller_interface::CallbackReturn::ERROR;
@@ -75,8 +76,17 @@ controller_interface::CallbackReturn ArmController::on_configure(const rclcpp_li
                     joint_name.c_str(), tolerance.position, tolerance.velocity);
     }
 
-    update_by_time_ = get_node()->get_parameter("update_by_time").as_bool();
-    RCLCPP_INFO(get_node()->get_logger(), "轨迹推进模式: %s", update_by_time_ ? "按时间调度" : "按位置容差");
+    servo_velocity_ = get_node()->get_parameter("servo_velocity").as_double();
+    if (std::isfinite(servo_velocity_)) {
+        RCLCPP_WARN(get_node()->get_logger(), "舵机模式已启用，轨迹点将被简化为起点和终点。");
+        if (servo_velocity_ > 0.0) {
+            RCLCPP_WARN(get_node()->get_logger(), "舵机速度固定为 %.2f rad/s", servo_velocity_);
+        } else {
+            RCLCPP_WARN(get_node()->get_logger(), "舵机速度使用规划结果。当前 servo_velocity=%.2f", servo_velocity_);
+        }
+    } else {
+        RCLCPP_INFO(get_node()->get_logger(), "舵机模式未启用，将使用完整规划轨迹。");
+    }
 
     target_positions_.assign(joints_.size(), std::numeric_limits<double>::quiet_NaN());
     target_velocities_.assign(joints_.size(), 0.0);
@@ -143,31 +153,21 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
 
     if (has_active_trajectory_) {
         bool last_trajectory_finished = true;
-        double elapsed_seconds = (time - trajectory_start_time_).seconds();
 
         if (current_trajectory_point_index_ == 0) {
             trajectory_start_time_ = time;
         } else {
-            bool move_timeout = elapsed_seconds >= rclcpp::Duration(
-                                                       active_trajectory_.points[current_trajectory_point_index_ - 1].time_from_start)
-                                                       .seconds();
-            if (update_by_time_) {
-                last_trajectory_finished = move_timeout;
-            } else {
-                if (!move_timeout) {
-                    const auto &prev_point = active_trajectory_.points[current_trajectory_point_index_ - 1];
-                    for (size_t i = 0; i < joints_.size(); ++i) {
-                        if (fabs(current_positions_[i] - prev_point.positions[i]) > joint_tolerances_[joints_[i]].position) {
-                            last_trajectory_finished = false;
-                            break;
-                        }
-                    }
-                }
-            }
+            last_trajectory_finished = (time - trajectory_start_time_).seconds() >= rclcpp::Duration(
+                                                                                        active_trajectory_.points[current_trajectory_point_index_ - 1].time_from_start)
+                                                                                        .seconds();
         }
 
         if (last_trajectory_finished) {
             if (current_trajectory_point_index_ >= active_trajectory_.points.size()) {
+                RCLCPP_INFO(get_node()->get_logger(), "\n------------ Trajectory execution completed. -----------");
+                for (int i = 0; i < joints_.size(); ++i) {
+                    RCLCPP_INFO(get_node()->get_logger(), "Trajectory finished. Joint %s 当前位置: %.3f,目标位置: %.3f, 偏差: %.3f", joints_[i].c_str(), current_positions_[i], target_positions_[i], target_positions_[i] - current_positions_[i]);
+                }
                 finalize_trajectory("Trajectory execution completed.", GoalStatus::SUCCEEDED);
             } else {
                 const auto &point = active_trajectory_.points[current_trajectory_point_index_];
@@ -181,6 +181,12 @@ controller_interface::return_type ArmController::update(const rclcpp::Time &time
                     target_velocities_ = point.velocities;
                     target_accelerations_ = point.accelerations;
                 }
+                RCLCPP_INFO(get_node()->get_logger(), "\n------------ Moving to next trajectory point. -----------");
+                RCLCPP_INFO(get_node()->get_logger(), "Moving to trajectory point %zu/%zu", current_trajectory_point_index_ + 1, active_trajectory_.points.size(), point.time_from_start.sec + point.time_from_start.nanosec * 1e-9);
+                for (int i = 0; i < joints_.size(); ++i) {
+                    RCLCPP_INFO(get_node()->get_logger(), "move Trajectory. Joint %s 目标位置: %.3f, 目标速度: %.3f", joints_[i].c_str(), target_positions_[i], target_positions_[i], target_velocities_[i]);
+                }
+                RCLCPP_INFO(get_node()->get_logger(), "，预计时间 %.2f 秒", point.time_from_start.sec + point.time_from_start.nanosec * 1e-9);
                 current_trajectory_point_index_++;
             }
         }
@@ -321,6 +327,42 @@ bool ArmController::load_trajectory(
         }
 
         normalized.points.push_back(std::move(dst));
+    }
+
+    if (std::isfinite(servo_velocity_) && normalized.points.size() >= 2) {
+        trajectory_msgs::msg::JointTrajectoryPoint first_point = normalized.points.front();
+        trajectory_msgs::msg::JointTrajectoryPoint last_point = normalized.points.back();
+
+        if (servo_velocity_ > 0) {
+            double max_move_position_change = 0.0;
+            for (size_t i = 0; i < joints_.size(); ++i) {
+                double position_change = std::abs(last_point.positions[i] - first_point.positions[i]);
+                if (position_change > max_move_position_change) {
+                    max_move_position_change = position_change;
+                }
+            }
+            double move_time = max_move_position_change / std::max(servo_velocity_, 0.01); // 避免除以零
+            first_point.time_from_start.sec = 0;
+            first_point.time_from_start.nanosec = 0;
+            last_point.time_from_start.sec = static_cast<int32_t>(move_time);
+            last_point.time_from_start.nanosec = static_cast<uint32_t>((move_time - static_cast<int32_t>(move_time)) * 1e9);
+
+            for (size_t i = 0; i < joints_.size(); ++i) {
+                last_point.velocities[i] = (last_point.positions[i] - first_point.positions[i]) / move_time;
+            }
+        } else {
+            const double total_time =
+                (rclcpp::Duration(last_point.time_from_start) - rclcpp::Duration(first_point.time_from_start)).seconds();
+
+            for (size_t i = 0; i < joints_.size(); ++i) {
+                last_point.velocities[i] = total_time > 0.0 ? (last_point.positions[i] - first_point.positions[i]) / total_time : 0.0;
+            }
+        }
+
+        normalized.points.clear();
+        normalized.points.reserve(2);
+        normalized.points.push_back(std::move(first_point));
+        normalized.points.push_back(std::move(last_point));
     }
 
     return true;

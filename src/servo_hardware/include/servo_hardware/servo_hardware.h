@@ -44,6 +44,8 @@ class ServoHardware : public hardware_interface::SystemInterface {
     double write_postion_tolerance_ = 0;
     double write_velocity_tolerance_ = 0;
     double write_acceleration_tolerance_ = 0;
+    double update_seconds_{0.1};
+    rclcpp::Time start_time_;
 
     std::string serial_port_;
     int baud_rate_;

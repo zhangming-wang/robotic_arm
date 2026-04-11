@@ -33,29 +33,29 @@
     <xacro:property name="servo_0_width" value="0.02472" />
     <xacro:property name="servo_0_height" value="0.0350" />
     <xacro:property name="servo_0_mass" value="0.05" />
-    <xacro:property name="servo_0_min_pos" value="-${pi}" />
-    <xacro:property name="servo_0_max_pos" value="${pi}" />
+    <xacro:property name="servo_0_min_pos" value="-${pi/4}" />
+    <xacro:property name="servo_0_max_pos" value="${pi/4}" />
 
     <xacro:property name="servo_1_length" value="0.0442" />
     <xacro:property name="servo_1_width" value="0.020" />
     <xacro:property name="servo_1_height" value="0.03715" />
     <xacro:property name="servo_1_mass" value="0.05" />
-    <xacro:property name="servo_1_min_pos" value="-${pi/2}" />
-    <xacro:property name="servo_1_max_pos" value="${pi/2}" />
+    <xacro:property name="servo_1_min_pos" value="-${pi/4}" />
+    <xacro:property name="servo_1_max_pos" value="${0}" />
 
     <xacro:property name="servo_2_length" value="0.0556" />
     <xacro:property name="servo_2_width" value="0.020" />
     <xacro:property name="servo_2_height" value="0.064" />
     <xacro:property name="servo_2_mass" value="0.08" />
-    <xacro:property name="servo_2_min_pos" value="-${pi/2}" />
-    <xacro:property name="servo_2_max_pos" value="${pi/2}" />
+    <xacro:property name="servo_2_min_pos" value="-${pi/4}" />
+    <xacro:property name="servo_2_max_pos" value="${0}" />
 
     <xacro:property name="servo_3_length" value="0.0516" />
     <xacro:property name="servo_3_width" value="0.020" />
     <xacro:property name="servo_3_height" value="${joint_connect_radius + 0.064}" />
     <xacro:property name="servo_3_mass" value="0.08" />
-    <xacro:property name="servo_3_min_pos" value="-${pi/2}" />
-    <xacro:property name="servo_3_max_pos" value="${pi/2}" />
+    <xacro:property name="servo_3_min_pos" value="-${pi}" />
+    <xacro:property name="servo_3_max_pos" value="${pi}" />
 
     <xacro:property name="servo_4_length" value="0.0442" />
     <xacro:property name="servo_4_width" value="0.020" />
@@ -382,7 +382,7 @@
         <gazebo>
             <plugin filename="libgz_ros2_control-system.so"
                 name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-                <parameters>$(find arm_description)/config/arm_controllers.yaml</parameters>
+                <parameters>$(find arm_description)/config/arm_controllers_sim.yaml</parameters>
             </plugin>
         </gazebo>
     </xacro:if>

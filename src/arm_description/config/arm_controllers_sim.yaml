@@ -1,0 +1,42 @@
+gz_ros2_control:
+  ros__parameters:
+    use_sim_time: True
+
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # 硬件读写频率 (Hz)
+
+    # 1. 关节状态发布器：负责把舵机的实际位置发给 RViz
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # 2. 轨迹控制器：负责接收 MoveIt 的路径规划并执行
+    arm_controller:
+      type: arm_controller/ArmController
+      # type: position_controllers/JointGroupPositionController
+
+arm_controller:
+  ros__parameters:    
+    joints:
+      - joint0
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+    command_interfaces:
+      - position
+      - velocity
+      # - acceleration
+    state_interfaces:
+      - position
+      - velocity
+
+    constraints:
+      joint_limits:
+        joint0: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint1: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint2: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint3: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint4: {position_tolerance: 0.1, velocity_tolerance: 0.1}
+        joint5: {position_tolerance: 0.1, velocity_tolerance: 0.1}

@@ -135,6 +135,10 @@ ros2 launch arm_moveit arm_moveit_real.launch.py
 
 ![MoveIt / RViz 界面](doc/images/rviz2.png)
 
+## gazebo 界面
+![gazebo 界面](doc/images/gazebo.png)
+
+
 ## 📄 License
 
 本仓库根目录采用 `Apache-2.0` 许可证，详见 `LICENSE`。

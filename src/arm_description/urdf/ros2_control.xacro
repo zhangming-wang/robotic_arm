@@ -1,11 +1,16 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <xacro:macro name="arm_ros2_control" params="name use_sim:=false">
+    <xacro:macro name="arm_ros2_control" params="name use_sim:=false use_mock_hardware:=false">
         <ros2_control name="SixAxisServoArm" type="system">
             <hardware>
                 <xacro:if value="${use_sim}">
-                    <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-                    <param name="position_proportional_gain">50.0</param>
+                    <xacro:if value="${use_mock_hardware}">
+                        <plugin>mock_components/GenericSystem</plugin>
+                    </xacro:if>
+                    <xacro:unless value="${use_mock_hardware}">
+                        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+                        <param name="position_proportional_gain">50.0</param>
+                    </xacro:unless>
                 </xacro:if>
                 <xacro:unless value="${use_sim}">
                     <plugin>servo_hardware/ServoHardware</plugin>

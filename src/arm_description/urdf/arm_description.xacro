@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="base">
     <xacro:arg name="use_sim" default="false" />
+    <xacro:arg name="use_mock_hardware" default="false" />
 
     <xacro:macro name="box_inertial" params="mass x y z">
         <inertial>
@@ -339,7 +340,10 @@
     </joint>
 
     <xacro:include filename="$(find arm_description)/urdf/ros2_control.xacro" />
-    <xacro:arm_ros2_control name="SixAxisServoArm" use_sim="$(arg use_sim)" />
+    <xacro:arm_ros2_control
+        name="SixAxisServoArm"
+        use_sim="$(arg use_sim)"
+        use_mock_hardware="$(arg use_mock_hardware)" />
 
     <xacro:if value="$(arg use_sim)">
         <!-- 仿真时禁用重力，避免控制器激活前机械臂倒塌 -->
